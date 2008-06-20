@@ -1,0 +1,13 @@
+Changes
+Makefile.PL
+MANIFEST
+README
+t/Statistics-Sequences.t
+lib/Statistics/Sequences.pm
+Sequences/Joins.pm
+Sequences/Pot.pm
+Sequences/Runs.pm
+ex/joins.pl
+ex/pot.pl
+ex/runs.pl
+ex/sequences.pl
