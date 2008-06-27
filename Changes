@@ -4,3 +4,4 @@ Revision history for Perl extension Statistics::Sequences.
 	- original version; created by h2xs 1.23 with options
 		-AX --skip-exporter -use-new-tests -n Statistics::Sequences
 
+0.02 2008/06/29: upload via PAUSE. 

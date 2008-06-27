@@ -2,6 +2,10 @@ Statistics-Sequences version 0.01
 =================================
 
 Tests of sequential structure in the form of runs, joins, bunches, etc.
+Includes the Wald-Walfowitz Runs test, and
+Helmut Schmidt's test of the "potential energy", or pot, of runs.
+Test of significance are limited to approximations from the normal distribution.
+Provides methods for dichotomising data.
 
 INSTALLATION
 
@@ -18,7 +22,7 @@ This module requires these other modules and libraries:
 
   Class::OOorNO  
   Statistics::Descriptive
-  Statistics::Deviation
+  Statistics::Zed
   Statistics::Distributions
   Statistics::Lite
 

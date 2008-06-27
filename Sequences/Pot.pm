@@ -6,17 +6,17 @@ use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
 
-use Statistics::Deviation;
-use Statistics::Sequences 0.01;
+use Statistics::Zed 0.01;
+use Statistics::Sequences 0.02;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 #sub new {
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 #    my $class = shift;
-#    push @_, qw(units n_events observed expected deviation range sd z p_value);
+#    push @_, qw(samples states observed expected range obs_dev std_dev z p_value);
 #    bless {}, $class;
 #    $class->SUPER::new(@_);
 #}
@@ -31,18 +31,18 @@ sub test {
             
     my $m = scalar @{$self->{'testdata'}} || return undef; ##croak __PACKAGE__, '::test More than an empty list of data for pot-testing is needed';
 
-    # Set the target-event, allowing for a zero value:
-    my $event = defined $args->{'event'} ? 
-        delete $args->{'event'} : 
-        croak __PACKAGE__, '::test An event for pot-testing is needed';
+    # Set the target-state, allowing for a zero value:
+    my $state = defined $args->{'state'} ? 
+        delete $args->{'state'} : 
+        croak __PACKAGE__, '::test A state for pot-testing is needed';
 
-	# Init an array holding the indices at which the event appears in the given data:
+	# Init an array holding the indices at which the state appears in the given data:
     # Meanwhile, build arrays of bunch and space frequencies, should this be requested:
     my ($k, $j, $i, @indices, @bunches, @spaces) = (0, 0);
     
     for ($i = 0; $i < $m; $i++) {
         # Allow for matching numerical or string values:
-        if ($self->{'testdata'}->[$i] eq $event) {
+        if ($self->{'testdata'}->[$i] eq $state) {
              $k++ if $spaces[$k];
              $j++ if ( scalar @indices ) and ( $indices[-1] != ($i - 1) );
              $bunches[$j]++;
@@ -58,9 +58,9 @@ sub test {
     $self->{'scale'} = (!$args->{'scale'} or $args->{'scale'} < 1) ? 1 : delete $args->{'scale'};
 
     # Lump relevant quantities into the Pot object:
-    $self->{'event'} = $event;
-    $self->{'units'} = $m;
-    $self->{'n_events'} = $n;
+    $self->{'state'} = $state;
+    $self->{'samples'} = $m;
+    $self->{'count'} = $n;
     $self->{'range'} = $n ? ( $self->{'scale'} * $m / $n ) : '';
     #$self->{'range_e'} = $r;
 
@@ -81,19 +81,19 @@ sub test {
 
     my $precision = defined $args->{'p_precision'} ? $args->{'p_precision'} : $self->{'p_precision'};
     # Resume bad-mouthing, if possible:
-    if (!$n) { # Event $event did not occur within the data-set for pot-testing
+    if (!$n) { # State $state did not occur within the data-set for pot-testing
         $self->{$_} = 0 foreach qw/observed expected z_value obs_dev std_dev variance/;
         $self->{'p_value'} = sprintf('%.' . $precision . 'f', 1);
     }
 	elsif ($n > $m) {# Numerator sd must != 0, otherwise deviation will soon be divided by it:
-	    croak __PACKAGE__, "::test Event $event occurred an improbable number of times: $n among $m observations";
+	    croak __PACKAGE__, "::test State $state occurred an improbable number of times: $n among $m observations";
 	}
     else { # Do some proper work:
         my ($obs_val, $exp_val, $var) = _calc($n, $m, $self->{'scale'}, \@indices);
         $args->{'ccorr'} ||= $self->{'ccorr'};
         my $ccorr = $m <= 60 && $args->{'ccorr'} ? 1 : 0;
-        my $dev = Statistics::Deviation->new(ccorr => $ccorr, tails => $args->{'tails'}, distribution => $args->{'dist'}, p_precision => $precision);
-        my ($z, $pz, $obs_dev, $std_dev) = $dev->test(observed => $obs_val, expected => $exp_val, variance => $var);
+        my $dev = Statistics::Zed->new(ccorr => $ccorr, tails => $args->{'tails'}, distribution => $args->{'dist'}, p_precision => $precision);
+        my ($z, $pz, $obs_dev, $std_dev) = $dev->zscore(observed => $obs_val, expected => $exp_val, variance => $var);
         # More lumping:
         $self->{'observed'} = $obs_val;
         $self->{'expected'} = $exp_val;
@@ -117,10 +117,10 @@ sub dump {
 
     if ($args->{'text'} and $args->{'text'} > 1) {
         print '-' x 50 . "\n";
-        print "Pot test results for event $self->{'event'} among $self->{'units'} observations:\n";
+        print "Pot test results for state $self->{'state'} among $self->{'samples'} observations:\n";
         print '-' x 50 . "\n";
-        print " No. of observations of event = $self->{'n_events'}\n";
-        print " No. of bunches of event = " . $self->{'bunches'}->count() . 
+        print " No. of observations of state = $self->{'count'}\n";
+        print " No. of bunches of state = " . $self->{'bunches'}->count() . 
                   ', with a mean length of '. sprintf('%.2f', $self->{'bunches'}->mean()) .
                   ', and a mean spacing of '. sprintf('%.2f', $self->{'spaces'}->mean()) ." between each bunch.\n" if $self->{'bunches'};
         print ' Pot calculated with a range of ' . sprintf('%.2f', $self->{'range'}) . " over a scale of $self->{'scale'}\n";   
@@ -128,7 +128,7 @@ sub dump {
         $self->SUPER::_dump_verbose($args);
      }
      else {
-        $args->{'testname'} = "Pot($self->{event})";
+        $args->{'testname'} = "Pot($self->{state})";
         $self->SUPER::_dump_sparse($args);
     }
     return $self;
@@ -172,11 +172,11 @@ __END__
 
 =head1 NAME
 
-Statistics::Sequences::Pot - Schmidt's test of force-like runs among randomly spaced events
+Statistics::Sequences::Pot - Helmut Schmidt's test of force-like runs of a discrete state within a random distribution
 
 =head1 VERSION
 
-This is documentation for version 0.01 of Statistics::Sequences::Pot, released 13 July 2006.
+This is documentation for version 0.02 of Statistics::Sequences::Pot, released 27 June 2008.
 
 =head1 SYNOPSIS
 
@@ -187,35 +187,35 @@ This is documentation for version 0.01 of Statistics::Sequences::Pot, released 1
  # Load an array (reference) of data (of strings or numbers) into the pot object:
  $pot->load([qw/2 0 8 5 3 5 2 3 1 1 9 4 4 1 5 5 6 5 8 7 5 3 8 5 6/]);
 
- # Test the relative runs of a specific event (e.g., "5") among these data:
- $pot->test(event => 5);
+ # Test the relative runs of a specific state (e.g., "5") among these data:
+ $pot->test(state => 5);
 
  # Print out the Pot-statistic, and a z-test of its significance:
  $pot->dump();
 
- # Prints: Event 5: Pot = 4.31, z = -0.19, p = 0.42539
+ # Prints: State 5: Pot = 4.31, z = -0.19, p = 0.42539
 
  # or be discretely informed re individual stats, post-test, e.g., :
 
- print "Observed Pot = $pot->{'observed'} for $pot->{'events'} occurrences
-  of $pot->{'event'} among $pot->{'units'};
+ print "Observed Pot = $pot->{'observed'} for $pot->{'count'} occurrences
+  of $pot->{'state'} among $pot->{'samples'};
   probability = $pot->{'p_value'}\n";
 
  # Prints: Observed Pot = 4.3098698035002 for 7 occurrences of 5 among 25; probability = 0.42539
 
 =head1 DESCRIPTION
 
-The Pot statistic measures the bunching relative to the spacing of a single event within a series of other events, conceived by Helmut Schmidt as a targeted "potential" energy (or Pot) that dissipates exponentially between events. It's not limited to considering only clusters of I<consecutive> events (or bunches), as is the case with the more familiar Runs test of sequences.
+The Pot statistic measures the bunching relative to the spacing of a single state within a series of other states, conceived by Helmut Schmidt as a targeted "potential" energy (or Pot) that dissipates exponentially between states. It's not limited to considering only clusters of I<consecutive> states (or bunches), as is the case with the more familiar Runs test of sequences.
 
-Say you're interested in the occurrence of th event B<3> within an array of digits: note how, in the following arrays, there are increasing breaks between the B<3>s (separated by 0, 1 and then 2 other events):
+Say you're interested in the occurrence of the state B<3> within an array of digits: note how, in the following arrays, there are increasing breaks between the B<3>s (separated by 0, 1 and then 2 other states):
 
  4, 7, 3, 3
  3, 4, 3, 7
  3, 8, 1, 3
 
-The occurrence of B<3> is, with the Pot-test, of exponentially declining interest across these sequences, given the increasing breaks by other events between the occurrences of 3. The statistic does not ignore these ever remoter occurrences of the event of interest; it accounts for increased spacing between them as if there were an exponentially declining force, a I<pot>ential towards B<3>, within the data-stream (up to a theoretical or empirical asymptote that may be specified).
+The occurrence of B<3> is, with the Pot-test, of exponentially declining interest across these sequences, given the increasing breaks by other states between the occurrences of 3. The statistic does not ignore these ever remoter occurrences of the state of interest; it accounts for increased spacing between them as if there were an exponentially declining force, a I<pot>ential towards B<3>, within the data-stream (up to a theoretical or empirical asymptote that may be specified).
 
-Running the Pot-test involves a I<z>-test for significance; Schmidt (2000) provided data demonstrating Pot's conformance with the normal distribution. This will, of course, be improved by repeated sampling, and by pooling observations into blocks.
+Running the Pot-test involves testing its significance as a standard "z" score; Schmidt (2000) provided data demonstrating Pot's conformance with the normal distribution. This will, of course, be improved by repeated sampling, and by pooling observations into blocks.
 
 =head1 METHODS
 
@@ -238,17 +238,17 @@ Loads data anonymously or by name. See L<load|Statistics::Sequences/load> in the
 
 =head2 test
 
- $pot->test(event => 'a'[, scale => 1, full => 0]);
+ $pot->test(state => 'a'[, scale => 1, full => 0]);
 
 I<Aliases:> C<perform_pot_test>
 
-Runs the Pot-test on a specified event, lumps the Pot object with stats, and returns itself. Note that data must already be loaded into the Pot object before testing, otherwise, expect a C<croak>. The test works with the following required, and then some optional, parameters, each as C<name =E<gt> value> pairs. 
+Runs the Pot-test on a specified state, lumps the Pot object with stats, and returns itself. Note that data must already be loaded into the Pot object before testing, otherwise, expect a C<croak>. The test works with the following required, and then some optional, parameters, each as C<name =E<gt> value> pairs. 
 
 =over 4
 
-=item B<event> => I<string>
+=item B<state> => I<string>
 
-The event within the data whose bunching is to be tested. This is the only required parameter to L<test|test>, which will surely C<croak> if no event is specified, or the perverse occasion when an event occurs more often than there are data. If the event does not exist in the data, all parameters are undefined.
+The state within the data whose bunching is to be tested. This is the only required parameter to L<test|test>, which will surely C<croak> if no state is specified, or if a state occurs more often than there are data. If the state does not exist in the data, nix is defined.
 
 =item B<scale> => I<numeric> E<gt>= 1
 
@@ -262,7 +262,7 @@ Optionally, standard descriptive statistics regarding the bunches, and the space
 
 =head2 dump
 
- $pot->dump(data => '1|0', flag => '1|0', text => '0|1|2');
+ $pot->dump(flag => '1|0', text => '0|1|2');
 
 Print Pot-test results to STDOUT. See L<dump|Statistics::Sequences/dump> in the Statistics::Sequences manpage for details.
 
@@ -272,17 +272,17 @@ Once calling L<test|test>, the pot object is lumped with the following attribute
 
 =over
 
-=item B<units>
+=item B<samples>
 
-The size of the submitted data.
+The size of the submitted data (or number of "trials").
 
-=item B<n_events>
+=item B<count>
 
-The number of times the target event occurred in the submitted array.
+The number of times the target state occurred in the submitted array.
 
 =item B<observed>
 
-A measure of the number and size of bunchings of the event that occurred within the array.
+A measure of the number and size of bunchings of the state that occurred within the array.
 This is based on Schmidt (2000), Equations 6-7, and his Appended program. The formula is:
 
 =for html <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>I</i>,<i>J</i>=1..<i>N</i><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SUM&nbsp;&nbsp;<i>r</i><sup>|<i>n</i>(<i>I</i>) - <i>n</i>(<i>J</i>)|</sup><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<i>I</i>&lt;<i>J</i></p>
@@ -295,21 +295,21 @@ where
 
 =item
 
-is the number of observations, and I<S> (for scale) is a constant determining the range I<r> of the potential energy between pairs of I<I> and I<J> events.
+is the number of observations, and I<S> (for scale) is a constant determining the range I<r> of the potential energy between pairs of I<I> and I<J> states.
 
-In most situations, should all events be equiprobable, or their probability be proportionate to their number, I<r> would reflect the average distance, or delay, between I<successive> events, equal to the number of all observations divided by the number of events. For example, if there were 10 possible events, and 100 observations have been made, then the probability of re-occurrence of any one of the 10 events within any slot will be equal to 100/10, with I<S> = 1, i.e., expecting that any one of the events would mostly occur by a spacing of 10, and then by an exponentially declining tendency toward consecutive occurrence. In this way, with I<S> = 1, Pot can be considered to be a measure of "short-range bunching," as Schmidt called it. Bunching over a larger range than this minimally expected range can be measured with I<S> > 1. This is specified, optionally, as the argument named I<scale> to L<test|test>. Hypothesis-testing might be made with respect to various values of the I<scale> parameter.
+In most situations, should all states be equiprobable, or their probability be proportionate to their number, I<r> would reflect the average distance, or delay, between I<successive> states, equal to the number of all observations divided by the number of states. For example, if there were 10 possible states, and 100 observations have been made, then the probability of re-occurrence of any one of the 10 states within any slot will be equal to 100/10, with I<S> = 1, i.e., expecting that any one of the states would mostly occur by a spacing of 10, and then by an exponentially declining tendency toward consecutive occurrence. In this way, with I<S> = 1, Pot can be considered to be a measure of "short-range bunching," as Schmidt called it. Bunching over a larger range than this minimally expected range can be measured with I<S> > 1. This is specified, optionally, as the argument named I<scale> to L<test|test>. Hypothesis-testing might be made with respect to various values of the I<scale> parameter.
 
 =item B<expected>
 
-The theoretically expected value of Pot, given I<N> events among I<M> observations, and I<r> range of clustering within these observations. It is calculated as follows, given the above definitions.
+The theoretically expected value of Pot, given I<N> states among I<M> observations, and I<r> range of clustering within these observations. It is calculated as follows, given the above definitions.
 
 =for html <p>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pot = ((<i>N</i>(<i>N</i> - 1))/(<i>M</i>(<i>M</i> - 1))) . (<i>r</i>/1 - <i>r</i>) . (<i>M</i> - (1/(1 - <i>r</i>)))</p>
 
-=item B<deviation>
+=item B<obs_dev>
 
 The observed value of Pot less the expected value of Pot, and hence the amount by which the observed value deviates from that expected by chance.
 
-=item B<sd>
+=item B<std_dev>
 
 The standard deviation, based on the theoretically expected variance of Pot, which is given by:
 
@@ -317,21 +317,21 @@ The standard deviation, based on the theoretically expected variance of Pot, whi
 
 =item B<range>
 
-The range of observations over which Pot was assessed, simply being the product of the I<scale> and number of observations, divided by the number of events.
+The range of observations over which Pot was assessed, simply being the product of the I<scale> and number of observations, divided by the number of states.
 
 =item B<z_value>
 
-The result of the I<z>-test, based on dividing the observed deviation by the standard deviation.
+The standard score, based on dividing the observed deviation by the standard deviation.
 
 =item B<p_value>
 
-The probability associated with the absolute value of the I<z>-statistic.
+The probability associated with the absolute value of the I<z>-score.
 
 =item B<bunches>
 
 I<Only provided if passing> C<full =E<gt> 1> I<to> L<test|test>. 
 
-A L<Statistics::Descriptive::Full|Statistics::Descriptive> object, loaded with the lengths of each bunch of the event. Statistics such as the I<count>, I<mean>, I<mode> and I<range> of the observed bunches can be called, and the ordered list of bunch sizes can itself be retrieved. E.g.,
+A L<Statistics::Descriptive::Full|Statistics::Descriptive> object, loaded with the lengths of each bunch of the state. Statistics such as the I<count>, I<mean>, I<mode> and I<range> of the observed bunches can be called, and the ordered list of bunch sizes can itself be retrieved. E.g.,
 
  print $pot->{'bunches'}->mean() ."\n";
  @bunch_lengths = $pot->{'bunches'}->get_data();
@@ -340,21 +340,21 @@ A L<Statistics::Descriptive::Full|Statistics::Descriptive> object, loaded with t
 
 I<Only provided if passing> C<full =E<gt>> 1 I<to> L<test|test>.
 
-A L<Statistics::Descriptive::Full|Statistics::Descriptive> object, loaded with the lengths of the intervals, or spaces, between each bunch of the event. Statistics such as the I<count>, I<mean>, I<mode> and I<range> of the observed spaces can be called. E.g., 
+A L<Statistics::Descriptive::Full|Statistics::Descriptive> object, loaded with the lengths of the intervals, or spaces, between each bunch of the state. Statistics such as the I<count>, I<mean>, I<mode> and I<range> of the observed spaces can be called. E.g., 
 
  print $pot->{'spaces'}->mode() ."\n";
 
 =back
 
-Note that L<test|test> returns the Pot object (itself), so one could get "immediate" access to any of the above by, for example:
+Note that L<test|test> returns the Pot object (itself), so you could get "immediate" access to any of the above by, for example:
 
- my $n_zeroes = $pot->test(event => 0)->{'n_events'};
+ my $n_zeroes = $pot->test(state => 0)->{'count'};
 
- print 'median spaces = ' . $pot->test(event => 0, full => 1)->{'spaces'}->median() . "\n";
+ print 'median spaces = ' . $pot->test(state => 0, full => 1)->{'spaces'}->median() . "\n";
 
 =head1 EXAMPLES 
 
-1. Using Pot as a test of bunching of a particular event within a collection of quasi-random observations.
+1. Using Pot as a test of bunching of a particular state within a collection of quasi-random observations.
 
  use Statistics::Sequences::Pot;
  use strict;
@@ -365,32 +365,32 @@ Note that L<test|test> returns the Pot object (itself), so one could get "immedi
    $data[$i] = int(rand(16));
  }
 
- # Assess degree of bunching within these data with respect to a randomly selected target event:
- my $event = int(rand(16));
+ # Assess degree of bunching within these data with respect to a randomly selected target state:
+ my $state = int(rand(16));
 
  my $pot = Statistics::Sequences::Pot->new();
- $pot->load(\@data)->test(event => $event);
+ $pot->load(\@data)->test(state => $state);
 
  # Access the results of this analysis:
- print "The probability of obtaining as much bunching of $event as observed is $pot->{'p_value'}\n";
+ print "The probability of obtaining as much bunching of $state as observed is $pot->{'p_value'}\n";
  # or:
- print "For event $pot->{'event'} occurring $pot->{'events'} times among $pot->{'units'}, ".
+ print "For state $pot->{'state'} occurring $pot->{'count'} times among $pot->{'samples'}, ".
     "the observed value of Pot was $pot->{'observed'}.\n" .
     "The expected value of Pot was $pot->{'expected'}\n" .
-    "The deviation from expectation was $pot->{'deviation'}\n" .
-    "The standard deviation was $pot->{'sd'}\n" .
+    "The deviation from expectation was $pot->{'obs_dev'}\n" .
+    "The standard deviation was $pot->{'std_dev'}\n" .
     "Z = $pot->{'z_value'}\n" .
-    "Probability of this deviation = $pot->{'p_value'}\n";
+    "Probability of this z-value = $pot->{'p_value'}\n";
  # or print the lot, and more, in English:
  $pot->dump(text => 2);
 
  # See what else was happening, having already given test() the data to test:
  foreach (0 .. 15) {
-    next if $_ == $event;
-    $pot->test(event => $_)->dump();
+    next if $_ == $state;
+    $pot->test(state => $_)->dump();
   }
 
-2. Using Pot as a test of randomness of an array of dichotomous observations. Note: alphabetic strings as the elements of the array; reuse of loaded data; recycling of loaded data between tests; internal storage of the event; and exploitation of the module for semi-Pot purposes.
+2. Using Pot as a test of randomness of an array of dichotomous observations. Note: alphabetic strings as the elements of the array; reuse of loaded data; recycling of loaded data between tests; internal storage of the state; and exploitation of the module for semi-Pot purposes.
 
   use Statistics::Sequences::Pot;
   use strict;
@@ -406,22 +406,22 @@ Note that L<test|test> returns the Pot object (itself), so one could get "immedi
   my $pot = Statistics::Sequences::Pot->new();
   $pot->load(\@data);
 
-  # Run and dump a couple analyses, on each possible event:
-  $pot->test(event => 'hit');
+  # Run and dump a couple analyses, on each possible state:
+  $pot->test(state => 'hit');
   $pot->dump();
-  $pot->test(event => 'miss');
+  $pot->test(state => 'miss');
   $pot->dump();
 
   # Be randomly redundant:
-  $pot->test(event => $categories[int(rand(@categories))], full => 1);
+  $pot->test(state => $categories[int(rand(@categories))], full => 1);
 
-  print "Randomly selected event was a $pot->{'event'}, and this occurred $pot->{'events'} times, " .
+  print "Randomly selected state was a $pot->{'state'}, and this occurred $pot->{'count'} times, " .
         "most frequently bunching by a length of " . $pot->{'bunches'}->mode() . "\n";
 
   # Prints, e.g.:
-  ## Event hit: Pot = 252.04, z = 0.83, p = 0.20298
-  ## Event miss: Pot = 246.43, z = 0.82, p = 0.20721
-  ## Randomly selected event was a miss, and this occurred 315 times, most frequently bunching by a length of 1
+  ## State hit: Pot = 252.04, z = 0.83, p = 0.20298
+  ## State miss: Pot = 246.43, z = 0.82, p = 0.20721
+  ## Randomly selected state was a miss, and this occurred 315 times, most frequently bunching by a length of 1
 
 =head1 REFERENCES
 
@@ -433,7 +433,7 @@ L<http://www.fourmilab.ch/rpkp/> for Schmidt's many papers on the physical conce
 
 L<Statistics::Descriptive|Statistics::Descriptive> : The present module adds data to "Full" objects of this package in order to access descriptives re bunches and spaces.
 
-L<Statistics::Distributions|Statistics::Distributions> : The present module uses the C<uprob()> method of this package for determining the probability associated with the I<z>-test.
+L<Statistics::Distributions|Statistics::Distributions> : The present module uses the C<uprob()> method of this package for determining the probability associated with the I<z>-value.
 
 L<Statistics::Frequency|Statistics::Frequency> : the C<proportional_frequency()> method in this module could be informative when working with data of the kind used here.
 
@@ -449,11 +449,13 @@ Limitations of the actual Pot statistic may be considered to be its newness, not
 
 =over 4
 
-=item v 0.01
+=item v 0.02
 
-June 2006
+June 2008
 
 Initital release via PAUSE.
+
+See CHANGES in installation dist for revisions.
 
 =back
 
@@ -461,7 +463,7 @@ Initital release via PAUSE.
 
 =over 4
 
-=item Copyright (c) 2006 Roderick Garton
+=item Copyright (c) 2006-2008 Roderick Garton
 
 rgarton@utas_DOT_edu_DOT_au
 

@@ -6,11 +6,11 @@ use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
 
-use Statistics::Deviation;
-use Statistics::Sequences 0.01;
+use Statistics::Zed 0.01;
+use Statistics::Sequences 0.02;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 sub test {
@@ -28,19 +28,19 @@ sub test {
 
    my $w = defined $args->{'windows'} ? delete $args->{'windows'} : scalar @data;
    
-   my ($obs_val, $exp_val, $var, $i, %events) = (0, 0);    
+   my ($obs_val, $exp_val, $var, $i, %states) = (0, 0);    
 
    # Count the number of joins:
    foreach ($i = 0; $i < @data; $i++) {
-       $events{$data[$i]}++;
+       $states{$data[$i]}++;
        if ($i and $data[$i] ne $data[$i - 1] ) {
            $obs_val++;
        }
    }
 
-   return undef if scalar keys %events < 2;
-   #croak __PACKAGE__, '::test Less than two events were found in the data' if scalar keys %events < 2;
-   croak __PACKAGE__, '::test More than two events were found in the data' if scalar keys %events > 2;
+   return undef if scalar keys %states < 2;
+   #croak __PACKAGE__, '::test Less than two states were found in the data' if scalar keys %states < 2;
+   croak __PACKAGE__, '::test More than two states were found in the data' if scalar keys %states > 2;
 
    $exp_val = 2 * ($w - 1) * $p * $q;
     
@@ -51,8 +51,8 @@ sub test {
    if ($var) {
        $args->{'ccorr'} ||= $self->{'ccorr'};
        my $ccorr = scalar @data <= 60 && $args->{'ccorr'} ? 1 : 0;
-       my $dev = Statistics::Deviation->new(ccorr => $ccorr, tails => $args->{'tails'}, distribution => $args->{'dist'}, p_precision => $precision);
-       my ($z, $pz, $obs_dev, $std_dev) = $dev->test(observed => $obs_val, expected => $exp_val, variance => $var);
+       my $dev = Statistics::Zed->new(ccorr => $ccorr, tails => $args->{'tails'}, distribution => $args->{'dist'}, p_precision => $precision);
+       my ($z, $pz, $obs_dev, $std_dev) = $dev->zscore(observed => $obs_val, expected => $exp_val, variance => $var);
        $self->{'z_value'} = $z;
        $self->{'p_value'} = $pz;
        $self->{'r_value'} = $dev->z_2_r($z);
@@ -130,17 +130,17 @@ Loads data anonymously or by name. See L<load|Statistics::Sequences/load> in the
 
  $joins->test(prob => 1/3);
 
-Test the currently loaded data for significance of the number of joins, given a probability of each event in the data array of B<prob>. This parameter is optionally defined in the call to C<test>; the default value is 0.5. Valid values are between 0 and 1, inclusive. In a classic signal detection task, for instance, where an event is either a hit or miss, the probability of each event is 0.5. In a classic ESP task, with 5 possible alternatives as targets on each trial, each even has a 1 in 5 chance of occurring, but we still test for a probability of 1/2 as the data will be have to be reduced to a dichotomous hit/miss format in order to be Runs- or Joins-tested.
+Test the currently loaded data for significance of the number of joins, given a probability of each state in the data array of B<prob>. This parameter is optionally defined in the call to C<test>; the default value is 0.5. Valid values are between 0 and 1, inclusive. In a classic signal detection task, for instance, where a state is either a hit or miss, the probability of each state is 0.5. In a classic ESP task, with 5 possible alternatives as targets on each trial, each state has a 1 in 5 chance of occurring, but we still test for a probability of 1/2 as the data will be have to be reduced to a dichotomous hit/miss format in order to be Runs- or Joins-tested.
 
 =head2 dump
 
- $joins->dump(data => '1|0', flag => '1|0', text => '0|1|2');
+ $joins->dump(flag => '1|0', text => '0|1|2');
 
 Print Joins-test results to STDOUT. See L<dump|Statistics::Sequences/dump> in the Statistics::Sequences manpage for details.
 
 =head1 EXAMPLE
 
-Here the problem is to assess the degree of consistency of ESP scoring from the number of hits obtained in each of 200 runs of 25 trials each. The number of hits expected on the basis of chance is 5 per run. To test for sustained high or low scoring sequences, a join is defined as the point at which a score on one side of this expectation value is followed by a score on the other side. Ignoring scores equalling the expectation value of 5, the probability of a join is 1/2, or 0.5 (the default value to C<test()>), assuming that, say, a score of 4 is as likely as a score of 6, and anything greater than a deviation of 5 (from 5) is improbable (or impossible). A meaningful result would obtain when the number of joins observed was below the number expected; we ignore the converse (and perverse) situation.
+Here the problem is to assess the degree of consistency of ESP scoring from the number of hits obtained in each of 200 runs of 25 trials each. The number of hits expected on the basis of chance is 5 per run. To test for sustained high or low scoring sequences, a join is defined as the point at which a score on one side of this expectation value is followed by a score on the other side. Ignoring scores equalling the expectation value of 5, the probability of a join is 1/2, or 0.5 (the default value to L<test|test>), assuming that, say, a score of 4 is as likely as a score of 6, and anything greater than a deviation of 5 (from 5) is improbable (or impossible). A meaningful result would obtain when the number of joins observed was below the number expected; we ignore the converse (and perverse) situation.
 
  use Statistics::Sequences;
 
@@ -160,8 +160,8 @@ Here the problem is to assess the degree of consistency of ESP scoring from the 
 
   my $seq = Statistics::Sequences->new();
   $seq->load(@scores);
-  $seq->cut(point => $expected_hits, equal => 0);
-  $seq->test('joins', tails => 1, ccorr => 1)->dump(data => 0, text => 1, flag => 1);
+  $seq->cut(value => $expected_hits, equal => 0);
+  $seq->test('joins', tails => 1, ccorr => 1)->dump(text => 1, flag => 1);
   # prints, e.g., Joins: expected = 79.00, observed = 67.00, z = -1.91, p = 0.028109*
 
 =head1 REFERENCES
@@ -172,9 +172,9 @@ Wishart, J. & Hirshfeld, H. O. (1936). A theorem concerning the distribution of 
 
 =head1 SEE ALSO
 
-L<Statistics::Sequences::Runs|Statistics::Sequences::Runs> : An analoguous and more widely known test. 
+L<Statistics::Sequences::Runs|lib::Statistics::Sequences::Runs> : An analoguous and more widely known test. 
 
-L<Statistics::Sequences::Pot|Statistics::Sequences::Pot> : Another concept of sequences.
+L<Statistics::Sequences::Pot|lib::Statistics::Sequences::Pot> : Another concept of sequences.
 
 =head1 BUGS/LIMITATIONS
 
@@ -184,11 +184,13 @@ No computational bugs as yet identfied. Hopefully this will change, given time.
 
 =over 4
 
-=item v 0.01
+=item v 0.02
 
-July 2006
+June 2008
 
 Initital release via PAUSE.
+
+See CHANGES in installation dist for revisions.
 
 =back
 
@@ -196,7 +198,7 @@ Initital release via PAUSE.
 
 =over 4
 
-=item Copyright (c) 2006 Roderick Garton
+=item Copyright (c) 2006-2008 Roderick Garton
 
 rgarton@utas_DOT_edu_DOT_au
 

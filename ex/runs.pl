@@ -1,77 +1,67 @@
-use Statistics::Sequences;
-use Statistics::Sequences::Joins;
-use Statistics::Sequences::Runs;
-use Statistics::Sequences::Pot;
-
-my $runs = Statistics::Sequences::Runs->new();
-my $pot = Statistics::Sequences::Pot->new();
-my $joins = Statistics::Sequences::Joins->new();
-
-$| = 1;
-
 my ($i, @targs, @resps, @scores);
 
 use Statistics::Sequences::Runs;
-$runs = Statistics::Sequences::Runs->new();
-# $runs->load(qw/2 0 8 5 3 5 2 3 1 1/);
-$runs->load(qw/1 0 0 0 1 1 0 1 1 0 0 1 0 0 1 1 1 1 0 1/)->test()->dump();
+my $runs = Statistics::Sequences::Runs->new();
 
-for ($i = 0; $i < 25; $i++) {
+for ($i = 0; $i < 100; $i++) {
     $targs[$i] = (qw/a b c d e/)[int(rand(5))];
     $resps[$i] = (qw/a b c d e/)[int(rand(5))];
     $scores[$i] = (qw/1 2 3/)[int(rand(3))];
 }
 
 print "\n" . '-=' x 20 . "\n";
-print "Anonymous load and cut test\n";
-#print '-=' x 20 . "\n";
+print "ANONYMOUS LOAD & CUT TEST\n";
+print "- a 100-sample list of scores made up of 3 states - the digits 1, 2, 3 - has been randomly generated\n";
+print "- they will now be tested for their runs about the mean\n\n";
+print "\nuse Statistics::Sequences::Runs;\n";
+print "my \$runs = Statistics::Sequences::Runs->new();\n";
+print "\$runs->load([\@scores]);\n";
+print "\$runs->cut(value => 'mean', equal => 0);\n";
+print "\$runs->test()->dump();\n";
+print "\n-These commands lead to the following print to STDOUT:\n";
 $runs->load(\@scores);
-$runs->cut(at => 'mean', equal => 0);
+$runs->cut(value => 'mean', equal => 0);
 $runs->test()->dump();
+print "\n-But what was the mean?\n";
+print "print \$runs->{'cut_value'};\n";
+print $runs->{'cut_value'}, "\n";
 print '-=' x 20 . "\n\n";
 
 print "\n" . '-=' x 20 . "\n";
-print "Nominal load and match test\n";
-#print '-=' x 20 . "\n";
-#$runs->load();
+print "NOMINAL LOAD & MATCH TEST\n";
+print "- 2 datasets of 100 samples each have been generated\n";
+print "- they each contain an independent sampling of one of 5 alternative states\n";
+print "- they will now be matched for the synchrony of their states at each sampling event:\n";
+print "\n";
+print "\$runs->load(targs => [\@targs], resps => [\@resps]);\n";
+print "\$runs->match('data' => ['targs', 'resps']); # match 2 samples as hits/misses\n";
+print "\$runs->test()->dump();\n";
+
 $runs->load(targs => \@targs, resps => \@resps);
-$runs->match('data' => ['targs', 'resps'], lag => 1, loop => 1); # match 2 samples as hits/misses
+$runs->match('data' => ['targs', 'resps']); # match 2 samples as hits/misses
 $runs->test()->dump();
 
-$joins->load(targs => \@targs, resps => \@resps);
-$joins->match(data => ['targs', 'resps']); # match 2 samples
-$joins->test(prob => 1/5)->dump();#, windows => 100
+print "\n\n-Do it again, but this time lag the response data, so each of its states refers to the state on the next target sample:\n";
+print "\n";
+print "\$runs->load(targs => [\@targs], resps => [\@resps]);\n";
+print "\$runs->match('data' => ['targs', 'resps'], lag => 1, loop => 0);\n";
+print "\$runs->test()->dump();\n";
 
-#$joins->load();
-#$joins->load();
-$joins->load($runs->{'testdata'});
-$joins->test(prob => 1/5)->dump();#, windows => 100
+$runs->load(targs => \@targs, resps => \@resps);
+$runs->match('data' => ['targs', 'resps'], lag => 1, loop => 0); # match 2 samples as hits/misses
+$runs->test()->dump();
 
+print "\n- ... and what would the Pot test do with the same data?\n";
+print "\n";
+print "use Statistics::Sequences::Pot;\n";
+print "my \$pot = Statistics::Sequences::Pot->new();\n";
+print "\$pot->load(\$runs->{'testdata'});\n";
+print "\$pot->test(state => 1)->dump();\n";
+require Statistics::Sequences::Pot;
+my $pot = Statistics::Sequences::Pot->new();
 $pot->load($runs->{'testdata'});
-$pot->test(event => 1)->dump(data => 1);
-
+$pot->test(state => 1)->dump();
+print "\n";
 print "\n" . '-=' x 20 . "\n";
 
- my @scores = (0, 1, 1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0);
- my $runs = Statistics::Sequences::Runs->new();
- $runs->load(\@scores);
- $runs->test();
- print " probability of obtaining these $runs->{'observed'} runs in 25 trials is $runs->{'p_value'}\n";
-  
- my ($i, @targets, @responses);
- for ($i = 0; $i < 25; $i++) {
-    $targets[$i] = (qw/star plus wave square circle/)[int(rand(5))];
-    $responses[$i] = (qw/star plus wave square circle/)[int(rand(5))];
-}
- 
- my $runs = Statistics::Sequences::Runs->new();
- $runs->load(targets => \@targets, responses => \@responses);
- $runs->match(data => [qw/targets responses/]);
- $runs->test()->dump(text => 2, data => 1, flag => 1);
- print " probability of obtaining $runs->{'observed'} runs is $runs->{'p_value'}\n";
-    
- # But what if the responses were actually guessed for the target on the trial on ahead?
- $runs->match(data => [qw/targets responses/], lag => 1)->test()->dump(data => 1);
- print "With precognitive responses to the target for the next trial,\n$runs->{'observed'} runs in 24 trials were produced when $runs->{'expected'} were expected,\nfor which the probability is $runs->{'p_value'}\n"; 
-    
 1;

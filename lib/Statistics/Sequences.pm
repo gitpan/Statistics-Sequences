@@ -6,10 +6,10 @@ use warnings;
 use Carp qw(croak);
 use Class::OOorNO qw(coerce_array);
 use Statistics::Descriptive;
-use Statistics::Deviation;
+use Statistics::Zed 0.01;
 use Statistics::Lite qw(:funcs);
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 sub new {
@@ -21,7 +21,7 @@ sub new {
     $self->{'data'} = '';
     $self->{'test'} = '';
     
-    foreach (qw/units expected observed variance std_dev obs_dev p_precision/) {
+    foreach (qw/samples expected observed variance std_dev obs_dev/) {
         $self->{$_} = $args{$_} || 0;
     }
     foreach (qw/p_value ccorr/) {
@@ -38,17 +38,13 @@ sub clear {
     my $self = shift;
     $self->{'data'} = '';
     $self->{'test'} = '';
-    foreach (qw/units expected observed variance std_dev obs_dev z_value/) {
+    foreach (qw/samples expected observed variance std_dev obs_dev z_value/) {
         $self->{$_} = 0;
     }
     foreach (qw/p_value/) {
         $self->{$_} = 1;
     }
 }
-
-#-----------------------------------------------------------------------------
-# DATA INITIALISATION
-#-----------------------------------------------------------------------------
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=        
 sub load {
@@ -92,8 +88,6 @@ sub get_data {
     return $self->{'data'};
 }
 
-#-----------------------------------------------------------------------------
-
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 sub cut {
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -101,20 +95,20 @@ sub cut {
     my $args = coerce_array(@_);
     my $dat = $self->_get_data($args->{'data'});
 
-    # Get a cut-point:
-    if ((!$args->{'point'}) or ($args->{'point'} =~ /^[a-z]+$/i and $args->{'point'} !~ /^m(e(an|dian)|ode)/)) {
-        $args->{'point'} = 'median';
+    # Get a cut-value:
+    if ((!$args->{'value'}) or ($args->{'value'} =~ /^[a-z]+$/i and $args->{'value'} !~ /^m(e(an|dian)|ode)/)) {
+        $args->{'value'} = 'median';
     }
     
-    if ($args->{'point'} =~ /^[a-z]+$/i) {
+    if ($args->{'value'} =~ /^[a-z]+$/i) {
         no strict 'refs';
-        $self->{'cut_value'} = &{$args->{'point'}}(@{$dat}); # using Statistics-Lite methods
+        $self->{'cut_value'} = &{$args->{'value'}}(@{$dat}); # using Statistics-Lite methods
     }
     else {
-        $self->{'cut_value'} = $args->{'point'};
+        $self->{'cut_value'} = $args->{'value'};
     }
     
-    # Find the number of observations above and below the cut_point:
+    # Find the number of observations above and below the cut_value:
     my @seqs = ();
     foreach (@{$dat}) {
         if ($_ > $self->{'cut_value'}) {
@@ -175,36 +169,28 @@ sub pool {
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     my $self = shift;
     my $args = coerce_array(@_);
-    croak __PACKAGE__, '::pool Data for pooling need to be loaded'
-    if !$args->{'data'} or ref $args->{'data'} ne 'ARRAY' or !scalar @{$args->{'data'}};
+    croak __PACKAGE__, '::pool Two samples of data for pooling need to be loaded'
+    if !$args->{'data'} or ref $args->{'data'} ne 'ARRAY' or !scalar @{$args->{'data'}} or scalar @{$args->{'data'}} != 2;
 
-    my ($i, $n1, $n2, @seqs) = @_;
-    my %sorted = ();
-    my $min = 0;
-   
+    my ($tot, %dat) = (0);
+
     foreach (@{$args->{'data'}}) {
-        croak __PACKAGE__, '::pool Data named \'', $_, '\' for pooling do not exist' if !$self->{'data'}->{$_};
-        $sorted{$_} = [sort {$a <=> $b} @{$self->{'data'}->{$_}}];
+        croak __PACKAGE__, '::pool Data named \'', $_, '\' for pooling do not exist' if ! @{$self->{'data'}->{$_}};
+        $dat{$_} = [sort {$a <=> $b} @{$self->{'data'}->{$_}}];
+        $tot += scalar(@{$dat{$_}});
     }
+ 
+    my ($i, $aa, $bb, @testdata) = ();
+    while (scalar(@testdata) < $tot) {
+        $aa = $dat{$args->{'data'}->[0]}->[0];
+        $bb = $dat{$args->{'data'}->[1]}->[0];
+        $i = defined $aa && defined $bb ? $aa < $bb ? 0 : 1 : defined $aa ? 0 : 1;
+        shift @{$dat{$args->{'data'}->[$i]}};
+        push @testdata, $args->{'data'}->[$i];
+    }
+ 
+    $self->{'testdata'} = \@testdata;
 
-    my $len1 = scalar @{$sorted{$args->{'data'}->[0]}};
-    my $len2 = scalar @{$sorted{$args->{'data'}->[1]}};
-    
-    my ($key, $i1, $i2) = ('', 0, 0);
-    for ($i = 0; $i < ($len1 + $len2); $i++) {
-        if ($sorted{$args->{'data'}->[0]}->[$i1] < $sorted{$args->{'data'}->[1]}->[$i2]) {
-            $key = $args->{'data'}->[0];
-            $i1++ if defined $sorted{$args->{'data'}->[0]}->[($i1 + 1)];
-        }
-        else {
-            $key = $args->{'data'}->[1];
-            $i2++ if defined $sorted{$args->{'data'}->[1]}->[($i2 + 1)];
-        }
-        $seqs[$i] = $key;
-        
-    }
-    $self->{'testdata'} = \@seqs;
-    #$self->{'tails'} = 2;
     return $self;
 }
 
@@ -333,11 +319,11 @@ sub series_update {
 sub series_test {
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
     my ($self) = (shift);
-    my $dev = Statistics::Deviation->new();
+    my $dev = Statistics::Zed->new();
     my $o = $self->{'series_stat'}->{'observed'}->sum();
     my $e = $self->{'series_stat'}->{'expected'}->sum();
     my $v = $self->{'series_stat'}->{'variance'}->sum();
-    my ($z, $pz, $obs_dev, $std_dev) = $dev->test(
+    my ($z, $pz, $obs_dev, $std_dev) = $dev->zscore(
         observed => $o,
         expected => $e,
         variance => $v);
@@ -350,6 +336,38 @@ sub series_test {
     $self->{'series'}->{'std_dev'} = $std_dev;
     $self->{'series'}->{'variance'} = $v;
     return $self; 
+}
+
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+sub string {
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    my $self = shift;
+    my $args = ref $_[0] ? $_[0] : Class::OOorNO::coerce_array(@_);
+
+    my $str = 'z = ';
+    if ($args->{'s_precision'}) {
+        $str .= sprintf('%.' . $args->{'s_precision'} . 'f', $self->{'z_value'});
+    }
+    else {
+        $str .= $self->{'z_value'};
+    }
+    $str .=  ', ' . $self->{'tails'} . '-p = ';
+    if ($args->{'p_precision'}) {
+        $str .= sprintf('%.' . $args->{'p_precision'} . 'f', $self->{'p_value'});
+    }
+    else {
+        $str .= $self->{'p_value'};
+    }
+    $str .= ($self->{'p_value'} < .05 ? ($self->{'p_value'} < .01 ? '**' : '*') : '') if $args->{'flag'};
+    return $str;
+}
+
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+sub dump_data {
+#=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+    my ($self, %args) = @_; 
+    my $delim = $args{'delim'} || " ";
+    print join($delim, @{$self->{'testdata'}}), "\n";
 }
 
 #=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
@@ -408,32 +426,6 @@ sub _dump_verbose {
           ' Standard deviation = ' . sprintf('%.2f', $self->{'std_dev'}) . "\n";
     print $self->string($args);
     print "\n";
-    print Statistics::Deviation::state_significance($self->{'p_value'}, $self->{'obs_dev'}) if $self->{'obs_dev'};
-    print '.' x 50 . "\n";
-}
-
-#-----------------------------------------------
-sub string {
-#-----------------------------------------------
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : Class::OOorNO::coerce_array(@_);
-
-    my $str = 'z = ';
-    if ($args->{'s_precision'}) {
-        $str .= sprintf('%.' . $args->{'s_precision'} . 'f', $self->{'z_value'});
-    }
-    else {
-        $str .= $self->{'z_value'};
-    }
-    $str .=  ', ' . $self->{'tails'} . '-p = ';
-    if ($args->{'p_precision'}) {
-        $str .= sprintf('%.' . $args->{'p_precision'} . 'f', $self->{'p_value'});
-    }
-    else {
-        $str .= $self->{'p_value'};
-    }
-    $str .= ($self->{'p_value'} < .05 ? ($self->{'p_value'} < .01 ? '**' : '*') : '') if $args->{'flag'};
-    return $str;
 }
 
 #-----------------------------------------------
@@ -568,7 +560,7 @@ Anonymous and named loading, and function aliases, are provided given the variet
 
 =head2 Dichotomising data
 
-Both the runs- and joins-tests expect dichotomous data, i.e., as if there were only two categorical variables. Numerical and multi-valued categorical data, once loaded, can be "reduced" to this format by the following methods, namely, L<cut|cut>, L<match|match> and L<pool|pool>. Or supply data in this format. Both the runs- and joins-test will C<croak> if more (or less) than two events are found in the data.
+Both the runs- and joins-tests expect dichotomous data, i.e., as if there were only two categorical variables. Numerical and multi-valued categorical data, once loaded, can be "reduced" to this format by the following methods, namely, L<cut|cut>, L<match|match> and L<pool|pool>. Or supply data in this format. Both the runs- and joins-test will C<croak> if more (or less) than two states are found in the data.
 
 Each method stores the data in the class object as an array-reference named "testdata", accessed so:
 
@@ -576,9 +568,9 @@ Each method stores the data in the class object as an array-reference named "tes
 
 =head3 cut
 
- $seq->cut(point => 'median', equal => 'gt'); # cut anonymously cached data at a central tendency
- $seq->cut(point => 23); # cut anonymously cached data at a specific value
- $seq->cut(point => 'mean', data => 'blues'); # cut named data at its average
+ $seq->cut(value => 'median', equal => 'gt'); # cut anonymously cached data at a central tendency
+ $seq->cut(value => 23); # cut anonymously cached data at a specific value
+ $seq->cut(value => 'mean', data => 'blues'); # cut named data at its average
 
 I<This method is only suitable for numerical data.>
 
@@ -591,15 +583,15 @@ The following options may be specified.
 
 =over 8
 
-=item point => 'mean|median|mode|\d+'
+=item value => 'mean|median|mode|\d+'
 
-Specify the value at which the data will be cut. This could be the mean, median or mode (as calculated by L<Statistics::Lite|Statistics::Lite>), or a numerical value within the range of the data. The default is the I<median>. The cut-value, as specified by C<point>, can be retrieved thus:
+Specify the value at which the data will be cut. This could be the mean, median or mode (as calculated by L<Statistics::Lite|Statistics::Lite>), or a numerical value within the range of the data. The default is the I<median>. The cut-value, as specified by C<value>, can be retrieved thus:
 
  print $seq->{'cut_value'};
 
 =item equal => 'I<gt>|I<lt>|I<0>'
 
-This option specifies how to cut the data should the cut-value (as specified by C<point>) be present in the data. The default value is 0: observations equal to the cut-value are skipped. If C<equal =E<gt> I<gt>>: all data-values I<greater than or equal to> the cut-value will form one group, and all data-values less than the cut-value will form another. To cut with all values I<less than or equal to> in one group, and higher values in another, set this parameter to I<lt>.
+This option specifies how to cut the data should the cut-value (as specified by C<value>) be present in the data. The default value is 0: observations equal to the cut-value are skipped. If C<equal =E<gt> I<gt>>: all data-values I<greater than or equal to> the cut-value will form one group, and all data-values less than the cut-value will form another. To cut with all values I<less than or equal to> in one group, and higher values in another, set this parameter to I<lt>.
 
 =item data => 'I<string>'
 
@@ -664,11 +656,7 @@ To effect looping, send a referenced list of the lag and a boolean for the loop,
 
  $seq->pool('data' => ['blues', 'reds']);
 
-Reduce two sets of cached I<numerical> data to two categories in a single array by pooling the data according to the magnitude of the values at each trial. For example, the following two lists would be reduced to the third by assigning a score for the data-set with the lowest (or equal) value on a trial, where 0 indicates a member of the first data-set, and 1 indicates a member of the second data-set; 5 runs emerge in the final data-set.
-
- @blues = (qw/1 1 2 2 2 3 4/);
- @reds =  (qw/1 2 2 3 3 4 4/);
- @dicho = (qw/0 0 1 0 0 0 1 1 0 1 1 0 1 1/);
+Reduce two sets of cached I<numerical> data to two categories in a single array by pooling the data according to the magnitude of the values at each trial. This is the typical option when using the Wald-Walfowitz test for determining a difference between two samples. Specifically, the values from both samples are pooled and ordered from lowest to highest, and then clustered into runs according to the sample from which neighbouring values come from. Another run occurs wherever there is a change in the source of the values. A non-random effect of, say, higher or lower values consistently coming from one sample rather than another, would be reflected in fewer runs than expected by chance. See the C<ex/checks.pl> file in the installation distribution for a couple examples.
 
 =head3 swing
 
@@ -682,7 +670,7 @@ This is another transformation that, like the L<cut|cut> method, can be used to 
 
 Dichotomously, the data can be seen as commencing with an ascending run of length 2, followed by a descending run of length 3, and finishing with a short increase. Note that the number of resulting observations is less than the original number.
 
-Note that the critical region of the distribution lies (only) in the upper-tail; a one-tailed test of significance is appropriate. This is automatically set, but can be specified by sending C<tails = E<gt> 1> to L<test|test>.
+Note that the critical region of the distribution lies (only) in the upper-tail; a one-tailed test of significance is appropriate.
 
 =over 8
 
@@ -704,11 +692,11 @@ The default result when the difference between two successive values is zero is 
 
  $seq->test('runs');
  $seq->test('joins');
- $seq->test('pot', event => 'a value appearing in the testdata');
+ $seq->test('pot', state => 'a value appearing in the testdata');
 
  $runs->test();
  $joins->test(prob => 1/2);
- $pot->test(event => 'circle');
+ $pot->test(state => 'circle');
 
 I<Alias:> C<process>
 
@@ -731,7 +719,7 @@ Optionally specify the name of the data to be tested. By default, this is not re
 
 =item ccorr => I<boolean>
 
-Specify whether or not to perform the continuity-correction on the observed deviation. Default is false. See L<Statistics::Deviation>.
+Specify whether or not to perform the continuity-correction on the observed deviation. Default is false. See L<Statistics::Zed>.
 
 =item tails => I<1>|I<2>
 
@@ -743,9 +731,9 @@ Specify whether the I<z>-value is calculated for both sides of the normal distri
 
 Some sub-package tests need to have parameters defined in the call to L<test|test>, and/or have specific options, as follows.
 
-B<Joins> : The Joins-test I<optionally> allows the setting of a probability value; see C<test> in the  L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/test> manpage.
+B<Joins> : The Joins-test I<optionally> allows the setting of a probability value; see L<test|test> in the  L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/test> manpage.
 
-B<Pot> : The Pot-test I<requires> the setting of an event to be tested; see C<test> in the  L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/test> manpage.
+B<Pot> : The Pot-test I<requires> the setting of a state to be tested; see C<test> in the  L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/test> manpage.
 
 B<Runs> : There are presently no specific requirements nor options for the Runs-test. 
 
@@ -784,7 +772,7 @@ All relevant statistical values are "lumped" into the class-object, and can be r
 
 =head3 dump
 
- $seq->dump(data => '1|0', flag => '1|0', text => '0|1|2', s_precision => 'integer', p_precision => 'integer');
+ $seq->dump(flag => '1|0', text => '0|1|2', s_precision => 'integer', p_precision => 'integer');
 
 I<Alias:> C<print_summary>
 
@@ -792,27 +780,23 @@ Print results of the last-conducted test to STDOUT. By default, if no parameters
 
 =over 8
 
-=item data => I<boolean>
-
-If true, the tested data are printed in a single line. The default is false.
-
 =item flag => I<boolean>
 
-If true, the I<p>-value associated with the I<z>-test of significance is appended with a single asterisk if the value if below .05, and with two asterisks if it is below .01.
+If true, the I<p>-value associated with the I<z>-value is appended with a single asterisk if the value if below .05, and with two asterisks if it is below .01.
 
 If false (default), nothing is appended to the p-value.
 
 =item text => I<0>|I<1>|I<2>
 
-If set to 1 (the default for an empty call to L<dump|dump>, a single line is printed, beginning with the name of the test, then the observed and expected values of the test-statistic, and the z-value and its associated p-value. The Pot-test, additionally, shows the event tested in parentheses after the test-name. For example:
+If set to 1 (the default for an empty call to L<dump|dump>, a single line is printed, beginning with the name of the test, then the observed and expected values of the test-statistic, and the z-value and its associated p-value. The Pot-test, additionally, shows the state tested in parentheses after the test-name. For example:
 
  Joins: expected = 400.00, observed = 360.00, z = -2.83, p = 0.0023389**
  Runs: expected = 398.86, observed = 361.00, z = -2.70, p = 0.0070374**
  Pot(1): expected = 288.51, observed = 303.63, z = 2.64, p = 0.0082920**
 
-If set to anything greater than 1, more verbose info is printed: each of the above bits of info are printed, on separate lines, as well as the observed and standard deviations, and a statement of significance of the I<z>-test, all in English.
+If set to anything greater than 1, more verbose info is printed: each of the above bits of info are printed, on separate lines, as well as the observed and standard deviations.
 
-If set to zero, no statistics are printed. This setting is useful if, alternatively, you only want to print the testdata (by setting the B<data> parameter to 1). 
+If set to zero, no statistics are printed ... This was useful at one point in development, and might become so again ...
 
 =item s_precision => 'I<non-negative integer>'
 
@@ -820,9 +804,15 @@ Precision of the z-statistic.
 
 =item p_precision => 'I<non-negative integer>'
 
-Specify rounding of the probability associated with the z-test to so many digits. If zero or undefined, you get everything available.
+Specify rounding of the probability associated with the z-value to so many digits. If zero or undefined, you get everything available.
 
 =back
+
+=head3 dump_data
+
+ $seq->dump_data(delim => "\n")
+
+Prints to STDOUT a space-separated line of the testdata - as dichotomised and put to test. Optionally, give a value for I<delim> to specify how the datapoints should be separated.
 
 =head3 string
 
@@ -838,7 +828,7 @@ L<Statistics::Burst|Statistics::Burst> : Another test of sequences.
 
 Results are dubious if there are only two observations.
 
-Support for non-I<z>-testing, and using poisson distribution for low number of observations
+Testing not by <z>-scores, and/or using poisson distribution for low number of observations
 
 Multivariate extension to Runs test, at least
 
@@ -848,11 +838,13 @@ Sort option for pool method ?
 
 =over 4
 
-=item v 0.01
+=item v 0.02
 
-April 2007
+June 2008
 
 Initital release via PAUSE.
+
+See CHANGES in installation dist for revisions.
 
 =back
 
