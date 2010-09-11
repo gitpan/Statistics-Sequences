@@ -7,10 +7,10 @@ use Carp 'croak';
 use vars qw($VERSION @ISA);
 
 use Statistics::Zed 0.02;
-use Statistics::Sequences 0.04;
+use Statistics::Sequences 0.041;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.04';
+$VERSION = '0.041';
 
 =pod
 

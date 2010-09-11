@@ -10,7 +10,7 @@ use Statistics::Zed 0.02;
 use Statistics::Lite qw(:funcs);
 use Scalar::Util qw(looks_like_number);
 
-$VERSION = '0.04';
+$VERSION = '0.041';
 $| = 1;
 
 =pod

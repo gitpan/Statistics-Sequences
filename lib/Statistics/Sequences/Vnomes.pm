@@ -9,11 +9,11 @@ use vars qw($VERSION @ISA);
 use Algorithm::Combinatorics qw(variations_with_repetition);
 use Math::Cephes;
 use Statistics::Zed 0.02;
-use Statistics::Sequences 0.04;
+use Statistics::Sequences 0.041;
 use Statistics::Lite qw(sum);
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 =pod
 
@@ -30,7 +30,9 @@ Statistics::Sequences::Vnomes - The Serial Test (psi-square) and Generalized Ser
 
 =head1 DESCRIPTION
 
-This module implements tests of the independence of successive elements of a sequence/series of data (list, vector, etc.) - specifically, "serial tests" for I<v>-nomes (a.k.a I<v>-plets or, for binary data, I<v>-bits) - what are call singlets/monobits, dinomes/doublets, trinomes/triplets, etc.. Serial tests tell us if all the variations of the states, of a certain sub-sequence length, I<v>, that would be possible in the population from which the series has been sampled, are equally represented in the sample. For example, a series sampled from a "heads'n'tails" (H and T) population can be tested for its equal representation of the trinomes HTH, HTT, TTT, THT, and so on. Counting up these I<v>-nomes at all points in the series, permitting overlaps, yields a statistic - psi-square - that is approximately distributed as chi-square; the Kendall-Babington Smith statistic. However, because these counts are not independent (given the overlaps), Good's Generalized Serial Test is more appropriate, and this is the default test-statistic returned by this module's C<test> routine - it computes psi-square by differencing, viz., in relation to not only the specified C<length>, or value of I<v>, but also its value for the first two prior lengths of I<v>, yielding a statistic, delta-square-psi-square (the "second backward difference" measure) that is exactly distributed as chi-square. The test is suitable for multi-state data, not only the binary, dichotomous series suitable for the Runs and Joins tests in this package. Note that this is I<not> the serial test described by Knuth (1998), which concerns non-overlapping pairs of sequences. (Given this variety of definitions of what is a "serial test," this module - like that for Runs, Pot, etc. - is named after the basic construct tested - i.e., I<v>-nomes - rather than the property of I<v>-nomes (seriality, successive independence, etc.) being tested.)
+This module implements tests of the independence of successive elements of a sequence/series of data (list, vector, etc.) - specifically, "serial tests" for I<v>-nomes (a.k.a I<v>-plets or, for binary data, I<v>-bits) - what are call singlets/monobits, dinomes/doublets, trinomes/triplets, etc..
+
+Serial tests tell us if all the variations of the states, of a certain sub-sequence length, I<v>, that would be possible in the population from which the series has been sampled, are equally represented in the sample. For example, a series sampled from a "heads'n'tails" (H and T) population can be tested for its equal representation of the trinomes HTH, HTT, TTT, THT, and so on. Counting up these I<v>-nomes at all points in the series, permitting overlaps, yields a statistic - psi-square - that is approximately distributed as chi-square; the Kendall-Babington Smith statistic. However, because these counts are not independent (given the overlaps), Good's Generalized Serial Test is more appropriate, and this is the default test-statistic returned by this module's C<test> routine - it computes psi-square by differencing, viz., in relation to not only the specified C<length>, or value of I<v>, but also its value for the first two prior lengths of I<v>, yielding a statistic, delta-square-psi-square (the "second backward difference" measure) that is exactly distributed as chi-square. The test is suitable for multi-state data, not only the binary, dichotomous series suitable for the Runs and Joins tests in this package. Note that this is I<not> the serial test described by Knuth (1998), which concerns non-overlapping pairs of sequences. (Given this variety of definitions of what is a "serial test," this module - like that for Runs, Pot, etc. - is named after the basic construct tested - i.e., I<v>-nomes - rather than the property of I<v>-nomes (seriality, successive independence, etc.) being tested.)
 
 =head1 METHODS
 
@@ -153,9 +155,6 @@ sub test {
     $self->{'nstates'} = $nstates;
     $self->{'delta'} = $delta;
     $self->{'counts'} = $stats{$v}->{'obs_counts'};
-    my $cats = keys(%{$freq});
-    print "cats = $cats n= $n\n";
-    
     $self->{'observed'} = Statistics::Lite::mean(values %{$self->{'counts'}});
     $self->{'observed_stdev'} = Statistics::Lite::stddev(values %{$self->{'counts'}});
     $self->{'expected'} = $stats{$v}->{'expected'};
@@ -309,7 +308,7 @@ This outputs, as returned by C<string>:
 
 That is, the observed frequency of each possible pair of seating arrangements (OO, OE, EE, EO) did not differ significantly from that expected. Taking a bigger picture, though, and changing the value of C<length> to 3, yields:
 
- delta^2psi^2 (2) = 6.25, 2p = 0.0439369336234074
+ delta^2psi^2 (2) = 6.25, 2p = 0.04139369336234074
 
 =head1 REFERENCES
 
