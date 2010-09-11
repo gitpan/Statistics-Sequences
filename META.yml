@@ -1,0 +1,13 @@
+---
+name: Statistics-Sequences
+version: 0.04
+author:
+  - Roderick Garton
+abstract: Tests of sequential structure in the form of runs, joins, bunches, dinomes, triplets, etc.
+license: perl
+generated_by: Module::Build version 0.2808
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.2.html
+  version: 1.2
+resources:
+  license: http://dev.perl.org/licenses/

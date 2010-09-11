@@ -1,0 +1,17 @@
+Revision history for Perl extension Statistics::Sequences.
+
+0.04 2010 Sept: 
+ + added sub-module Vnomes -  Good's serial test
+ + clean-up dump sub: if text => 0 or undef, you get printed what's returned by the sub string 
+ + cleaned-up generic <load> sub and associated private subs
+ + deprecated calling a test just by its name, rather than hash-keying it as "what".
+
+0.031 2009 March: some rationalisation of precision_s and precision_p operations
+
+0.03 2009 March: spring-cleaning; but see Statistics::Zed 0.02 for relevant changes
+
+0.02 2008/06/29: upload via PAUSE. 
+
+0.01  Sun Jul 23 22:31:41 2006
+	- original version; created by h2xs 1.23 with options
+		-AX --skip-exporter -use-new-tests -n Statistics::Sequences

@@ -1,0 +1,37 @@
+Statistics-Sequences version 0.04
+=================================
+
+Tests of sequential structure in the form of runs, joins, bunches, etc.
+Includes the Wald-Walfowitz Runs test, Helmut Schmidt's test of the "potential energy", or pot, of runs, and I. J. Good's version of the Serial Test for "v-nomes".
+Test of significance are typically limited to approximations from the normal distribution, or as chi-square.
+Provides methods for dichotomising data where relevant for testing runs and joins.
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+
+This module requires these other modules and libraries:
+
+  Statistics::Zed
+  Statistics::Distributions
+  Statistics::Lite
+  Math::Cephes
+  Algorithm::Combinatorics
+  Scalar::Util
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2007-2010 by R. Garton
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself, either Perl version 5.8.8 or,
+at your option, any later version of Perl 5 you may have available.
+
+

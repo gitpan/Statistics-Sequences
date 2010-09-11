@@ -1,0 +1,8 @@
+<SOFTPKG NAME="Statistics-Sequences" VERSION="0,04,0,0">
+    <TITLE>Statistics-Sequences</TITLE>
+    <ABSTRACT>Tests of sequential structure in the form of runs, joins, bunches, dinomes, triplets, etc.</ABSTRACT>
+    <AUTHOR>Roderick Garton</AUTHOR>
+    <IMPLEMENTATION>
+        <CODEBASE HREF="PPM-Statistics-Sequences-0.04.tar.gz" />
+    </IMPLEMENTATION>
+</SOFTPKG>
