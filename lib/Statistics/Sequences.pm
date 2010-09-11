@@ -10,7 +10,7 @@ use Statistics::Zed 0.02;
 use Statistics::Lite qw(:funcs);
 use Scalar::Util qw(looks_like_number);
 
-$VERSION = '0.041';
+$VERSION = '0.042';
 $| = 1;
 
 =pod
@@ -30,27 +30,27 @@ Statistics::Sequences - Tests of sequential structure in the form of runs, joins
 
 =head1 DESCRIPTION
 
-Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, and L<Statistics::Sequences::Pot|Statistics::Sequences::Pot>. Examples of the use of each test are given in these pages.
+Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Examples of the use of each test are given in these pages.
 
-In general, to access the tests, you L<use|perlfunc/use> this base module to directly create a Statistics::Sequences object with the L<new|new> method, L<load|load> data into it, and then access each test by calling the L<test|test> method. This approach is useful for running several tests on the same data, as the data are immediately available to each test (of runs, pot and joins). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example.
+In general, to access the tests, you L<use|perlfunc/use> this base module to directly create a Statistics::Sequences object with the L<new|new> method, L<load|load> data into it, and then access each test by calling the L<test|test> method. This approach is useful for running several tests on the same data, as the data are immediately available to each test (of runs, joins, pot or vnomes). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example.
 
-If you only want to perform a test of one type (e.g., runs), you might want to simply L<use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Joins|Statistics::Sequences::Joins/SYNOPSIS> or L<Pot|Statistics::Sequences::Pot/SYNOPSIS>. You won't be able to access other tests by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
+If you only want to perform a test of one type (e.g., runs), you might want to simply L<use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
 
-Note also that there are methods to anonymously or nominally cache data, and that data might need to be reduced to a dichotomous format, before a valid test can be run. Several dichotomising methods are provided, once data are loaded, and accessible via the generic or specific class objects, as above.
+There are also methods to anonymously or nominally cache data, and that data might need to be reduced to a dichotomous format, before a valid test can be run. Several dichotomising methods are provided, once data are loaded, and accessible via the generic or specific class objects, as above.
 
 =head1 METHODS
 
 =head2 Interface
 
-The package provides an object-oriented interface for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins> and L<Pot-|Statistics::Sequences::Pot>tests of sequences. 
+The package provides an object-oriented interface for performing the tests of sequences in the form of L<Runs|Statistics::Sequences::Runs>, L<Joins|Statistics::Sequences::Joins>,  L<Pot(ential energy)|Statistics::Sequences::Pot> or L<Vnomes|Statistics::Sequences::Vnomes>. 
 
-Most methods are named with aliases, should you be used to referring to Perl statistics methods by one or another of the conventions. Present conventions are mostly based on those used in Juan Yun-Fang's modules, e.g., L<Statistics::ChisqIndep|Statistics::ChisqIndep>.
+Most methods are named with aliases, should you be used to referring to Perl statistics methods by one or another of the many conventions. Present conventions are mostly based on those used in Juan Yun-Fang's modules, e.g., L<Statistics::ChisqIndep|Statistics::ChisqIndep>.
 
 =head3 new
 
  $seq = Statistics::Sequences->new();
 
-Returns a new Statistics::Sequences object by which all the methods for caching, dichotomising, and testing data can be accessed, including each of the methods for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins> and L<Pot-|Statistics::Sequences::Pot>tests. The parameters C<corr>, C<tails> and C<precision_p> can be usefully set here, during construction, to be used by all tests.
+Returns a new Statistics::Sequences object by which all the methods for caching, dichotomising, and testing data can be accessed, including each of the methods for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins>, L<Pot-|Statistics::Sequences::Pot> or L<Vnomes-|Statistics::Sequences::Vnomes>tests.
 
 Any one of the sub-packages, such as L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, can be individually imported, and its own L<new|new> method can be called, e.g.:
 
@@ -197,9 +197,9 @@ sub unload {
 
 =head2 Dichotomising data
 
-Both the runs- and joins-tests expect dichotomous data, i.e., as if there were only two categorical variables. Numerical and multi-valued categorical data, once loaded, can be "reduced" to this format by the following methods, namely, L<cut|cut>, L<swing|swing>, L<pool|pool> and L<match|match>. Or supply data in this format. Both the runs- and joins-test will C<croak> if more (or less) than two states are found in the data.
+Both the runs- and joins-tests expect dichotomous data, i.e., as if there were only two categorical variables. If your data isn't in this format, numerical and multi-valued categorical data, once loaded, can be "reduced" to this format by the following methods, namely, L<cut|cut>, L<swing|swing>, L<pool|pool> and L<match|match>. Both the runs- and joins-test will C<croak> if more (or less) than two states are found in the data.
 
-Each method stores the data in the class object as an array-reference named "testdata", accessed so:
+Each method stores the data in the class object as an array-reference named "testdata", accessible so:
 
  print 'dichotomous data: ', @{$seq->{'testdata'}}, "\n";
 
@@ -376,7 +376,7 @@ sub swing {
 
  $seq->pool('data' => ['blues', 'reds']);
 
-Constructs a single series out of two series of cached I<numerical> data as a ranked pool, i.e., by pooling the data from each series according to the magnitude of their values at each trial. This is the typical option when using the Wald-Walfowitz test for determining a difference between two samples. Specifically, the values from both samples are pooled and ordered from lowest to highest, and then clustered into runs according to the sample from which neighbouring values come from. Another run occurs wherever there is a change in the source of the values. A non-random effect of, say, higher or lower values consistently coming from one sample rather than another, would be reflected in fewer runs than expected by chance. See the C<ex/checks.pl> file in the installation distribution for a couple examples.
+Constructs a single series out of two series of cached I<numerical> data as a ranked pool, i.e., by pooling the data from each series according to the magnitude of their values at each trial. This is the typical option when using the Wald-Walfowitz test for determining a difference between two samples. Specifically, the values from both samples are pooled and ordered from lowest to highest, and then clustered into runs according to the sample from which neighbouring values come from. Another run occurs wherever there is a change in the source of the values. A non-random effect of, say, higher or lower values consistently coming from one sample rather than another, would be reflected in fewer runs than expected by chance. See the C<ex/checks.pl> file in the CPAN installation distribution for a couple examples.
 
 See also the methods for categorical data where it is ok to ignore any order and intervals in your numerical data.
 
@@ -883,13 +883,13 @@ __END__
 
 =head1 REFERENCES
 
-Burdick, D. S., & Kelly, E. F. (1977). Statistical methods in parapsychological research. In B. B. Wolman (Ed.), I<Handbook of Parapsychology> (pp. 81-130). New York, NY, US: Van Nostrand Reinhold. [Description of joins-test, with comparision to runs-test.]
+Burdick, D. S., & Kelly, E. F. (1977). Statistical methods in parapsychological research. In B. B. Wolman (Ed.), I<Handbook of Parapsychology> (pp. 81-130). New York, NY, US: Van Nostrand Reinhold. [Description of joins-test, with comparison to runs-test.]
 
 Kelly, E. F. (1982). On grouping of hits in some exceptional psi performers. I<Journal of the American Society for Psychical Research>, I<I76>, 101-142. [Application of runs-test, with discussion of normality issue.]
 
 Schmidt, H. (2000). A proposed measure for psi-induced bunching of randomly spaced events. I<Journal of Parapsychology, 64,> 301-316. [Describes the pot-test.]
 
-Swed, F., & Eisenhart, C. (1943). Tables for testing randomness of grouping in a sequence of alternatives. I<Annals of Mathematical Statistics>, I<14>, 66-87. [Look in C<ex/checks.pl> in the installation dist for a few examples from this paper for testing.]
+Swed, F., & Eisenhart, C. (1943). Tables for testing randomness of grouping in a sequence of alternatives. I<Annals of Mathematical Statistics>, I<14>, 66-87. [Look in C<ex/checks.pl> in the installation dist for a several examples from this paper for testing.]
 
 Wald, A., & Wolfowitz, J. (1940). On a test whether two samples are from the same population. I<Annals of Mathematical Statistics>, I<11>, 147-162. [Describes the runs-test.]
 

@@ -9,15 +9,14 @@ my $builder = Module::Build->new(
     dist_version_from   => 'lib/Statistics/Sequences.pm',
     build_requires => {
         'Test::More' => 0,
-        'Class::OOorNo' => 0,
         'Statistics::Lite' => 3.2,
         'Statistics::Zed' => 0.01,
         'Statistics::Distributions' => 1.02,
-        'Statistics::ChisqIndep' => 0.1,
-	'Algorithm::Combinatorics' => '0.23',
-	'Scalar::Util' => '1.18',
+    	'Algorithm::Combinatorics' => '0.23',
+	    'Scalar::Util' => '1.18',
+        'Math::Cephes' => '0.43',
     },
-    add_to_cleanup      => [ 'Statistics-Sequences-0.031-*' ],
+    add_to_cleanup      => [ 'Statistics-Sequences-0.042-*' ],
 );
 
 $builder->create_build_script();

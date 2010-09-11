@@ -9,7 +9,7 @@ use vars qw($VERSION @ISA);
 use Algorithm::Combinatorics qw(variations_with_repetition);
 use Math::Cephes;
 use Statistics::Zed 0.02;
-use Statistics::Sequences 0.041;
+use Statistics::Sequences 0.042;
 use Statistics::Lite qw(sum);
 @ISA = qw(Statistics::Sequences);
 
@@ -308,7 +308,7 @@ This outputs, as returned by C<string>:
 
 That is, the observed frequency of each possible pair of seating arrangements (OO, OE, EE, EO) did not differ significantly from that expected. Taking a bigger picture, though, and changing the value of C<length> to 3, yields:
 
- delta^2psi^2 (2) = 6.25, 2p = 0.04139369336234074
+ delta^2psi^2 (2) = 6.25, 2p = 0.04239369336234074
 
 =head1 REFERENCES
 

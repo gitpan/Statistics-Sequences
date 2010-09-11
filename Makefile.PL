@@ -18,5 +18,5 @@ WriteMakefile(
         'Math::Cephes' => '0.43',
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'Statistics-Sequences-0.041-*' },
+    clean               => { FILES => 'Statistics-Sequences-0.042-*' },
 );

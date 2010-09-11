@@ -1,13 +1,39 @@
 ---
 name: Statistics-Sequences
-version: 0.041
+version: 0.042
 author:
-  - Roderick Garton
-abstract: Tests of sequential structure in the form of runs, joins, bunches, dinomes, triplets, etc.
+  - 'Roderick Garton <rgarton@cpan.org>'
+abstract: 'Tests of sequential structure in the form of runs, joins, bunches, etc.'
 license: perl
-generated_by: Module::Build version 0.2808
-meta-spec:
-  url: http://module-build.sourceforge.net/META-spec-v1.2.html
-  version: 1.2
 resources:
   license: http://dev.perl.org/licenses/
+build_requires:
+  Algorithm::Combinatorics: 0.23
+  Math::Cephes: 0.43
+  Scalar::Util: 1.18
+  Statistics::Distributions: 1.02
+  Statistics::Lite: 3.2
+  Statistics::Zed: 0.01
+  Test::More: 0
+configure_requires:
+  Module::Build: 0.340201
+provides:
+  Statistics::Sequences:
+    file: lib/Statistics/Sequences.pm
+    version: 0.042
+  Statistics::Sequences::Joins:
+    file: lib/Statistics/Sequences/Joins.pm
+    version: 0.042
+  Statistics::Sequences::Pot:
+    file: lib/Statistics/Sequences/Pot.pm
+    version: 0.042
+  Statistics::Sequences::Runs:
+    file: lib/Statistics/Sequences/Runs.pm
+    version: 0.042
+  Statistics::Sequences::Vnomes:
+    file: lib/Statistics/Sequences/Vnomes.pm
+    version: 0.02
+generated_by: Module::Build version 0.340201
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: 1.4
