@@ -16,7 +16,7 @@ my $builder = Module::Build->new(
 	    'Scalar::Util' => '1.18',
         'Math::Cephes' => '0.43',
     },
-    add_to_cleanup      => [ 'Statistics-Sequences-0.042-*' ],
+    add_to_cleanup      => [ 'Statistics-Sequences-0.05-*' ],
 );
 
 $builder->create_build_script();

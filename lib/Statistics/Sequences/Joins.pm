@@ -7,10 +7,10 @@ use Carp 'croak';
 use vars qw($VERSION @ISA);
 
 use Statistics::Zed 0.02;
-use Statistics::Sequences 0.042;
+use Statistics::Sequences 0.05;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.042';
+$VERSION = '0.05';
 
 =pod
 
@@ -153,7 +153,7 @@ Here the problem is to assess the degree of consistency of ESP scoring from the 
   $seq->load(@scores);
   $seq->cut(value => $expected_hits, equal => 0);
   $seq->test(what => 'joins', tails => 1, ccorr => 1)->dump(text => 1, flag => 1);
-  # prints, e.g., Joins: expected = 79.00, observed = 67.00, z = -1.91, p = 0.028109*
+  # prints, e.g., Joins: expected = 79.00, observed = 67.00, Z = -1.91, 1p = 0.028109*
 
 =head1 REFERENCES
 
@@ -190,5 +190,9 @@ This program is free software. It may be used, redistributed and/or modified und
 To the maximum extent permitted by applicable law, the author of this module disclaims all warranties, either express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose, with regard to the software and the accompanying documentation.
 
 =back
+
+=head1 END
+
+This ends documentation of a Perl implementation of the Wishart-Hirshfeld Joins test for randomness and group differences within a sequence.
 
 =cut

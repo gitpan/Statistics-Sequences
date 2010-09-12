@@ -10,31 +10,45 @@ use Statistics::Zed 0.02;
 use Statistics::Lite qw(:funcs);
 use Scalar::Util qw(looks_like_number);
 
-$VERSION = '0.042';
+$VERSION = '0.05';
 $| = 1;
 
 =pod
 
 =head1 NAME
 
-Statistics::Sequences - Tests of sequential structure in the form of runs, joins, bunches, etc.
+Statistics::Sequences - Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.
 
 =head1 SYNOPSIS
 
   use Statistics::Sequences;
   $seq = Statistics::Sequences->new();
-  $seq->load([1, 1, 0, 0, 1, 0, 1, 1, 0, 0, 0, 1]); # dichotomous values
-  $seq->test(what => 'runs')->dump(); # or 1st argument to test is 'joins' or 'pot'
-  # (prints:)
-  # Z = -0.30, p = 0.76206
+  my @data = ();
+  push @data, int(rand(2)) foreach 0 .. 300;
+  $seq->load(\@data); # or @data or dataname => \@data - note: dichotomous values
+  $seq->test(what => 'runs')->dump();
+  $seq->test(what => 'joins')->dump();
+  $seq->test(what => 'turns')->dump();
+  $seq->test(what => 'pot', state => 1)->dump();
+  $seq->test(what => 'vnomes', length => 2)->dump();
+
+  @data = ();
+  push @data, int(rand(10)) foreach 0 .. 300; # non-dichotomous, numerical values
+  $seq->test(what => 'pot', state => 1)->dump();
+  $seq->test(what => 'vnomes', length => 2)->dump();
+  $seq->test(what => 'turns')->dump();
+  $seq->swing(); # one of several dichotomization transforms, needed for testing Runs and Joins:
+  $seq->test(what => 'runs')->dump();
+  $seq->test(what => 'joins', )->dump();
+ 
 
 =head1 DESCRIPTION
 
-Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Examples of the use of each test are given in these pages.
+Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Examples of the use of each test are given in these pages.
 
 In general, to access the tests, you L<use|perlfunc/use> this base module to directly create a Statistics::Sequences object with the L<new|new> method, L<load|load> data into it, and then access each test by calling the L<test|test> method. This approach is useful for running several tests on the same data, as the data are immediately available to each test (of runs, joins, pot or vnomes). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example.
 
-If you only want to perform a test of one type (e.g., runs), you might want to simply L<use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
+If you only want to perform a test of one type (e.g., runs), you might want to simply L<use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS>, L<Turns|Statistics::Sequences::Turns/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
 
 There are also methods to anonymously or nominally cache data, and that data might need to be reduced to a dichotomous format, before a valid test can be run. Several dichotomising methods are provided, once data are loaded, and accessible via the generic or specific class objects, as above.
 
@@ -42,7 +56,7 @@ There are also methods to anonymously or nominally cache data, and that data mig
 
 =head2 Interface
 
-The package provides an object-oriented interface for performing the tests of sequences in the form of L<Runs|Statistics::Sequences::Runs>, L<Joins|Statistics::Sequences::Joins>,  L<Pot(ential energy)|Statistics::Sequences::Pot> or L<Vnomes|Statistics::Sequences::Vnomes>. 
+The package provides an object-oriented interface for performing the tests of sequences in the form of L<Runs|Statistics::Sequences::Runs>, L<Joins|Statistics::Sequences::Joins>, L<Pot(ential energy)|Statistics::Sequences::Pot>, L<Turns|Statistics::Sequences::Turns> or L<Vnomes|Statistics::Sequences::Vnomes>. 
 
 Most methods are named with aliases, should you be used to referring to Perl statistics methods by one or another of the many conventions. Present conventions are mostly based on those used in Juan Yun-Fang's modules, e.g., L<Statistics::ChisqIndep|Statistics::ChisqIndep>.
 
@@ -50,7 +64,7 @@ Most methods are named with aliases, should you be used to referring to Perl sta
 
  $seq = Statistics::Sequences->new();
 
-Returns a new Statistics::Sequences object by which all the methods for caching, dichotomising, and testing data can be accessed, including each of the methods for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins>, L<Pot-|Statistics::Sequences::Pot> or L<Vnomes-|Statistics::Sequences::Vnomes>tests.
+Returns a new Statistics::Sequences object by which all the methods for caching, dichotomising, and testing data can be accessed, including each of the methods for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins>, L<Pot-|Statistics::Sequences::Pot>, L<Turns-|Statistics::Sequences::Turns> or L<Vnomes-|Statistics::Sequences::Vnomes>tests.
 
 Any one of the sub-packages, such as L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, can be individually imported, and its own L<new|new> method can be called, e.g.:
 
@@ -293,7 +307,6 @@ sub cut {
     }
 
     $self->{'testdata'} = \@seqs;
-
     return $self;
 }
 
@@ -366,7 +379,6 @@ sub swing {
         }
     }
     $self->{'testdata'} = \@seqs;
-    #$self->{'tails'} = 1;
     return $self;
 }
 
@@ -408,7 +420,6 @@ sub pool {
     }
  
     $self->{'testdata'} = \@testdata;
-
     return $self;
 }
 
@@ -489,7 +500,6 @@ sub match {
         $seqs[$i] = $dat->[0]->[$i] eq $dat->[1]->[$i] ? 1 : 0;
     }
     $self->{'testdata'} = \@seqs;
-    #$self->{'tails'} = 2;
     return $self;
 }
 
@@ -537,12 +547,37 @@ sub lag {
     return [\@tgt, \@rsp];
 }
 
+=head4 binate
+
+ $seq->binate(oneis => 'E'); # optionally specify a state in the sequence to be set as "1"
+ $seq->binate(oneis => 'E', data => 'targets'); # if more than one data sequence is loaded, specify which one by name
+
+A basic utility to convert a list of categorical elements into a list of 1s and zeroes, setting the first element in the list to 1 (or whatever is specified as "oneis") on all its occurrences in the list, and all other values in the list to zero. This is simply useful if you have categorical data with two states that, without assuming they have numerical properties, could still be assessed for, say, runs up-and-down, or turning-points. 
+
+=cut
+
+#-----------------------------------------------
+sub binate {
+#-----------------------------------------------
+    my $self = shift;
+    my $args = ref $_[0] ? $_[0] : {@_};
+    my $dat = $self->_rawdata_aref($args->{'data'});
+
+    # What value should be set to 1 and others to zero? Either as given, or the first value in the sequence:
+    my $oneis = defined $args->{'oneis'} ? delete $args->{'oneis'} : $dat->[0];
+
+    # Replace observations with 1s and 0s:
+    $self->{'testdata'} = [map {$_ eq $oneis ? 1 : 0} @{$dat}];
+    return $self;
+}
+
 =head2 Testing data
 
 =head3 test
 
  $seq->test(what => 'runs');
  $seq->test(what => 'joins');
+ $seq->test(what => 'turns');
  $seq->test(what => 'pot', state => 'a value appearing in the testdata');
  $seq->test(what => 'vnomes', length => 'an integer greater than zero and less than sample-size');
 
@@ -553,7 +588,7 @@ sub lag {
 
 I<Alias:> C<process>
 
-When using a Statistics::Sequences class-object, this method requires naming which test to perform, i.e., runs, joins, pot or vnomes. This is I<not> required when the class-object already refers to one of the sub-modules, as created by the C<new> method within L<Statistics::Sequences::Runs|Statistics::Sequences::Runs/new>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/new>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/new> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/new>.
+When using a Statistics::Sequences class-object, this method requires naming which test to perform, i.e., runs, joins, pot or vnomes. This is I<not> required when the class-object already refers to one of the sub-modules, as created by the C<new> method within L<Statistics::Sequences::Runs|Statistics::Sequences::Runs/new>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/new>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/new>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns/new> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/new>.
 
 Note that simply giving the first argument as the name, unkeyed, is deprecated, and will be removed in the next version; i.e., don't just use, e.g.:
 
@@ -594,7 +629,7 @@ B<Pot> : The Pot-test I<requires> the setting of a state to be tested; see C<tes
 
 B<Vnomes> : The Seriality test for V-nomes I<requires> a length, i.e., the value of I<v>; see C<test> in the L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/test> manpage..
 
-B<Runs> : There are presently no specific requirements nor options for the Runs-test. 
+B<Runs>, B<Turns> : There are presently no specific requirements nor options for the Runs- and Turns-tests. 
 
 =cut
 
@@ -657,15 +692,16 @@ If false (default), nothing is appended to the I<p>-value.
 
 =item text => I<0>|I<1>|I<2>
 
-If set to 1, a single line is printed, beginning with the name of the test, then the observed and expected values of the test-statistic, and the I<z>-value and its associated I<p>-value. The Pot-test, additionally, shows the state tested in parentheses after the test-name, and the test for I<v>-nomes shows the tested length in parentheses after the test-name. For example:
+If set to 1, a single line is printed, beginning with the name of the test, then the observed and expected values of the test-statistic, and the I<z>-value and its associated I<p>-value. The Pot-test, additionally, shows the state tested in parentheses after the test-name, and the test for I<v>-nomes shows the tested degrees-of-freedom in parentheses after the test-name. For example:
 
- Joins: expected = 400.00, observed = 360.00, z = -2.83, p = 0.0023389**
- Runs: expected = 398.86, observed = 361.00, z = -2.70, p = 0.0070374**
- Pot(1): expected = 288.51, observed = 303.63, z = 2.64, p = 0.0082920**
+ Joins: observed = 9.000, expected = 7.680, Z = 0.292261298612503, 2p = 0.77008
+ Runs: observed = 24.000, expected = 26.000, Z = -0.428660704987056, 2p = 0.66816
+ Pot(reds): observed = 19.473, expected = 17.916, Z = 0.783870400176386, 2p = 0.43312
+ delta^2psi^2 (81) = 74.0232558139535, 2p = 0.695649837679089
 
-If set to anything greater than 1, more verbose info is printed: each of the above bits of info are printed, on separate lines, with some additional info about sample-size, etc.
+If set to anything greater than 1, more verbose info is printed: all the above info, on separate lines, with some additional info about sample-size, etc.
 
-If set to zero, only the string returned by C<string> is printed, with no terminal line-break.
+If set to zero, only the string returned by C<string> is printed.
 
 =item precision_s => 'I<non-negative integer>'
 
@@ -713,9 +749,9 @@ sub dump_data {
 
 =head3 string
 
- $seq->string()
+ $seq->string(break => '1|0'); # line break appended by default
 
-Returns a single line giving the I<z>-value and I<p>-value. Accepts the C<precision_s>, C<precision_p> and C<flag> options, as for L<dump|dump>.
+Returns a single line giving the I<z>-value and I<p>-value. Accepts the C<precision_s>, C<precision_p> and C<flag> options, as for L<dump|dump>. A line-break is, by default, appended, unless you specify C<break> => 0;
 
 =cut
 
@@ -726,7 +762,6 @@ sub string {
     my $args = ref $_[0] ? $_[0] : [@_];
     my $stat_name = delete $args->{'stat_name'} || 'z_value';
     return if !defined $self->{$stat_name} || !defined $self->{'p_value'};
-    $args->{'tails'} ||= $self->{'tails'};
     my $str = $stat_name eq 'z_value' ? 'Z' : $stat_name;
     $str .= ' (' . $self->{'df'} . ')' if defined $self->{'df'};
     $str .= ' = ';
@@ -734,6 +769,7 @@ sub string {
     $str .=  ', ' . ($args->{'tails'}||$self->{'_tails'}||2) . 'p = ';
     $str .= _precisioned($args->{'precision_p'}, $self->{'p_value'});
     $str .= ($self->{'p_value'} < .05 ? ($self->{'p_value'} < .01 ? '**' : '*') : '') if $args->{'flag'};
+    $str .= "\n" unless defined $args->{'break'} and $args->{'break'} == 0;
     return $str;
 }
 
@@ -831,6 +867,7 @@ sub _expound { # Get the expectation, variance & observed N-sequences from each 
     my ($self, $obs_val, $exp_val, $var, $args) = @_;
     $args->{'tails'} ||= 2;
     $args->{'ccorr'} = 1 if ! defined $args->{'ccorr'};
+
     my $dev = Statistics::Zed->new(
         ccorr => $args->{'ccorr'}, 
         tails => $args->{'tails'}, 
@@ -885,7 +922,11 @@ __END__
 
 Burdick, D. S., & Kelly, E. F. (1977). Statistical methods in parapsychological research. In B. B. Wolman (Ed.), I<Handbook of Parapsychology> (pp. 81-130). New York, NY, US: Van Nostrand Reinhold. [Description of joins-test, with comparison to runs-test.]
 
+Good, I. J., & Gover, T. N. (1967). The generalized serial test and the binary expansion of [square-root]2. I<Journal of the Royal Statistical Society A>, I<130>, 102-107. [Describes the test of Vnomes.]
+
 Kelly, E. F. (1982). On grouping of hits in some exceptional psi performers. I<Journal of the American Society for Psychical Research>, I<I76>, 101-142. [Application of runs-test, with discussion of normality issue.]
+
+Kendall, M. G. (1973). I<Time-series>. London, UK: Griffin. [Describes the test of Turns.]
 
 Schmidt, H. (2000). A proposed measure for psi-induced bunching of randomly spaced events. I<Journal of Parapsychology, 64,> 301-316. [Describes the pot-test.]
 
@@ -899,7 +940,7 @@ Wolfowitz, J. (1943). On the theory of runs with some applications to quality co
 
 =head1 SEE ALSO
 
-L<Statistics::Burst|Statistics::Burst> : Another test of sequences.
+L<Statistics::Burst|Statistics::Burst> : A test of sequences sensitive to temporal intervals of each state's occurrence.
 
 =head1 TO DO/BUGS
 
@@ -936,5 +977,9 @@ This program is free software. It may be used, redistributed and/or modified und
 To the maximum extent permitted by applicable law, the author of this module disclaims all warranties, either express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose, with regard to the software and the accompanying documentation.
 
 =back
+
+=head1 END
+
+This ends documentation of Perl implementations of tests of sequences for randomness and/or group differences formed as Runs, Joins, Pot (potential energy) and Vnomes (serial test), based on work by Good, Kendall, Schmidt, Swedt, Wald and Wishart.
 
 =cut

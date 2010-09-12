@@ -1,9 +1,9 @@
 ---
 name: Statistics-Sequences
-version: 0.042
+version: 0.05
 author:
   - 'Roderick Garton <rgarton@cpan.org>'
-abstract: 'Tests of sequential structure in the form of runs, joins, bunches, etc.'
+abstract: 'Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.'
 license: perl
 resources:
   license: http://dev.perl.org/licenses/
@@ -20,19 +20,22 @@ configure_requires:
 provides:
   Statistics::Sequences:
     file: lib/Statistics/Sequences.pm
-    version: 0.042
+    version: 0.05
   Statistics::Sequences::Joins:
     file: lib/Statistics/Sequences/Joins.pm
-    version: 0.042
+    version: 0.05
   Statistics::Sequences::Pot:
     file: lib/Statistics/Sequences/Pot.pm
-    version: 0.042
+    version: 0.05
   Statistics::Sequences::Runs:
     file: lib/Statistics/Sequences/Runs.pm
-    version: 0.042
+    version: 0.05
+  Statistics::Sequences::Turns:
+    file: lib/Statistics/Sequences/Turns.pm
+    version: 0.01
   Statistics::Sequences::Vnomes:
     file: lib/Statistics/Sequences/Vnomes.pm
-    version: 0.02
+    version: 0.031
 generated_by: Module::Build version 0.340201
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html

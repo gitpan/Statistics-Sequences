@@ -7,10 +7,10 @@ use Carp 'croak';
 use vars qw($VERSION @ISA);
 
 use Statistics::Zed 0.02;
-use Statistics::Sequences 0.042;
+use Statistics::Sequences 0.05;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.042';
+$VERSION = '0.05';
 
 =pod
 
@@ -393,21 +393,19 @@ Note that L<test|test> returns the Pot object (itself), so you could get "immedi
         "most frequently bunching by a length of " . $pot->{'bunches'}->mode() . "\n";
 
   # Prints, e.g.:
-  ## State hit: Pot = 252.04, z = 0.83, p = 0.20298
-  ## State miss: Pot = 246.43, z = 0.82, p = 0.20721
+  ## State hit: Pot = 252.04, Z = 0.83, 2p = 0.20298
+  ## State miss: Pot = 246.43, Z = 0.82, 2p = 0.20721
   ## Randomly selected state was a miss, and this occurred 315 times, most frequently bunching by a length of 1
 
 =head1 REFERENCES
 
-Schmidt, H. (2000). A proposed measure for psi-induced bunching of randomly spaced events. I<Journal of Parapsychology, 64,> 301-316.
+Schmidt, H. (2000). A proposed measure for psi-induced bunching of randomly spaced events. I<Journal of Parapsychology>, I<64,> 301-316.
 
 =head1 SEE ALSO
 
 L<http://www.fourmilab.ch/rpkp/> for Schmidt's many papers on the physical conceptualisation and properties of psi.
 
 L<Statistics::Descriptive|Statistics::Descriptive> : The present module adds data to "Full" objects of this package in order to access descriptives re bunches and spaces.
-
-L<Statistics::Distributions|Statistics::Distributions> : The present module uses the C<uprob()> method of this package for determining the probability associated with the I<z>-value.
 
 L<Statistics::Frequency|Statistics::Frequency> : the C<proportional_frequency()> method in this module could be informative when working with data of the kind used here.
 
@@ -438,5 +436,10 @@ This program is free software. It may be used, redistributed and/or modified und
 To the maximum extent permitted by applicable law, the author of this module disclaims all warranties, either express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose, with regard to the software and the accompanying documentation.
 
 =back
+
+=head1 END
+
+This ends documentation of a Perl implementation of Helmut Schmidt's pot test (test of potential energy) for random occurrence of a single state among others in a sequence.
+
 
 =cut

@@ -1,7 +1,12 @@
 Revision history for Perl extension Statistics::Sequences.
 
-0.042 2010 Sept: 
- + added sub-module Vnomes -  Good's serial test
+0.05 2010 Sept 12:
+ + added sub-module Turns - test of turning-points as local peaks and troughs 
+ + added binate method in main package
+ + Vnomes: changed rounding to flooring for the NIST-prescribed limit of length
+
+0.05 2010 Sept: 
+ + added sub-module Vnomes - Good's serial test
  + clean-up dump sub: if text => 0 or undef, you get printed what's returned by the sub string 
  + cleaned-up generic <load> sub and associated private subs
  + deprecated calling a test just by its name, rather than hash-keying it as "what".

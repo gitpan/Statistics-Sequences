@@ -7,10 +7,10 @@ use Carp 'croak';
 use vars qw($VERSION @ISA);
 
 use Statistics::Zed 0.02;
-use Statistics::Sequences 0.042;
+use Statistics::Sequences 0.05;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.042';
+$VERSION = '0.05';
 
 =pod
 
@@ -99,7 +99,6 @@ sub test {
            ( ( $sum**2 ) * ( $sum - 1 ) );
 
     # Test significance and lump various values into the class object:
-    
     $self->_expound($obs_val, $exp_val, $var, $args);
 
     return $self;
@@ -141,7 +140,9 @@ There is no need to dichotomise these data: there is already a single sample, wi
 
 Suggesting some non-random basis for people taking their seats, this outputs: 
 
- Runs: observed = 11.00, expected = 7.88, z = 1.60, 1p = 0.054834 
+ Runs: observed = 11.00, expected = 7.88, Z = 1.60, 1p = 0.054834 
+
+These data are also used as examples of the L<Turns test|Statistics::Sequences::Turns/EXAMPLE> and the L<Vnomes test|Statistics::Sequences::Vnomes/EXAMPLE>.
 
 =head2 ESP runs
 
@@ -211,5 +212,8 @@ This program is free software. It may be used, redistributed and/or modified und
 
 To the maximum extent permitted by applicable law, the author of this module disclaims all warranties, either express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose, with regard to the software and the accompanying documentation.
 
+=head1 END
+
+This ends documentation of a Perl implementation of the Wald-Walfowitz Runs test for randomness and group differences within a sequence.
 
 =cut
