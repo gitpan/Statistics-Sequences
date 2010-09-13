@@ -6,11 +6,11 @@ use warnings;
 use Carp qw(croak cluck);
 use vars qw($VERSION);
 use Statistics::Descriptive;
-use Statistics::Zed 0.02;
+use Statistics::Zed 0.04;
 use Statistics::Lite qw(:funcs);
 use Scalar::Util qw(looks_like_number);
 
-$VERSION = '0.05';
+$VERSION = '0.051';
 $| = 1;
 
 =pod
@@ -82,6 +82,7 @@ sub new {
     my $class = ref($proto) || $proto;
     my $self= {};
     bless($self, $class);
+    $self->{'zed'} = Statistics::Zed->new();
     return $self;
 }
 
@@ -552,7 +553,7 @@ sub lag {
  $seq->binate(oneis => 'E'); # optionally specify a state in the sequence to be set as "1"
  $seq->binate(oneis => 'E', data => 'targets'); # if more than one data sequence is loaded, specify which one by name
 
-A basic utility to convert a list of categorical elements into a list of 1s and zeroes, setting the first element in the list to 1 (or whatever is specified as "oneis") on all its occurrences in the list, and all other values in the list to zero. This is simply useful if you have categorical data with two states that, without assuming they have numerical properties, could still be assessed for, say, runs up-and-down, or turning-points. 
+A basic utility to convert a list of dichotomous categories into a list of 1s and zeroes, setting the first element in the list to 1 (or whatever is specified as "oneis") on all its occurrences in the list, and all other values in the list to zero. This is simply useful if you have categorical data with two states that, without assuming they have numerical properties, could still be assessed for, say, runs up-and-down, or turning-points. Naturally, this conversion is not meaningful, and should usually not be used, if the data are not categorically dichotomous, e.g., if they consist of the four DNA letters, or the five Zener symbols.
 
 =cut
 
@@ -671,8 +672,8 @@ All relevant statistical values are "lumped" into the class-object, and can be r
  $seq->{'obs_dev'} # The observed deviation (observed minus expected values), continuity-corrected, if so specified
  $seq->{'std_dev'} # The standard deviation
  $seq->{'variance'} # Variance
- $seq->{'z_value'} # The value of the z-statistic (ratio of observed to standard deviation), where relevant
- $seq->{'p_value'} # The "normal probability" associated with the z-statistic, or other statistic
+ $seq->{'z_value'} # The value of the Z-statistic (ratio of observed to standard deviation), where relevant
+ $seq->{'p_value'} # The "normal probability" associated with the Z-statistic, or other statistic
 
 =head3 dump
 
@@ -705,7 +706,7 @@ If set to zero, only the string returned by C<string> is printed.
 
 =item precision_s => 'I<non-negative integer>'
 
-Precision of the z-statistic.
+Precision of the I<Z>-statistic.
 
 =item precision_p => 'I<non-negative integer>'
 
@@ -760,12 +761,9 @@ sub string {
 #-----------------------------------------------
     my ($self) = (shift);
     my $args = ref $_[0] ? $_[0] : [@_];
-    my $stat_name = delete $args->{'stat_name'} || 'z_value';
-    return if !defined $self->{$stat_name} || !defined $self->{'p_value'};
-    my $str = $stat_name eq 'z_value' ? 'Z' : $stat_name;
-    $str .= ' (' . $self->{'df'} . ')' if defined $self->{'df'};
-    $str .= ' = ';
-    $str .= _precisioned($args->{'precision_s'}, $self->{$stat_name});
+    return if !defined $self->{'p_value'};
+    my $str = 'Z = ';
+    $str .= _precisioned($args->{'precision_s'}, $self->{'z_value'});
     $str .=  ', ' . ($args->{'tails'}||$self->{'_tails'}||2) . 'p = ';
     $str .= _precisioned($args->{'precision_p'}, $self->{'p_value'});
     $str .= ($self->{'p_value'} < .05 ? ($self->{'p_value'} < .01 ? '**' : '*') : '') if $args->{'flag'};
@@ -775,27 +773,15 @@ sub string {
 
 # PRIVATMETHODEN
 
-sub _dump_pass {
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : [@_];
-    if ($args->{'text'} and $args->{'text'} > 1) {
-        $self->_dump_verbose($args);
-    }
-    else {
-        $self->_dump_sparse($args);
-    }
-}   
-
 sub _dump_sparse {
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : [@_];
-    if ($args->{'text'}) { # equal 1:
+    if ($args->{'text'}) { # equals 1: print a single line giving observed and expected values + test-statistic & its p-value (only):
         print $args->{'testname'} . ': ' if defined $args->{'testname'} and length $args->{'testname'};
         printf("observed = %.3f", $self->{'observed'});
         printf $self->{'observed_stdev'} ? (" (%.3f), ", $self->{'observed_stdev'}) : ', ';
         printf("expected = %.3f, ", $self->{'expected'});
-        print $self->string($args);
-        print "\n";
+        print ' ', $self->string($args);
     }
     else {
         print $self->string($args);
@@ -804,17 +790,24 @@ sub _dump_sparse {
 
 sub _dump_verbose {
     my ($self, $args) = @_;
+    _print_title($args->{'title'});
     printf(" Observed %s = %.3f" , $args->{'testname'}, $self->{'observed'});
     printf $self->{'observed_stdev'} ? (" (%.3f)\n", $self->{'observed_stdev'}) : "\n";
     printf(" Expected %s = %.3f\n" , $args->{'testname'}, $self->{'expected'});
     print ' ', $self->string($args);
-    print "\n";
+}
+
+sub _print_title { # A heading offered when a call to dump has title => 2, i.e., verbose
+    my ($title) = (shift);
+    print '-' x 57 . "\n";
+    print "$title\n";
+    print '-' x 57 . "\n";
 }
 
 sub _rawdata_aref { 
     my ($self, $data_name) = @_;
     my $dat;
-    
+
     if ($data_name) {# Has a data array been named by the user?
        if (ref $data_name) {# Yes, but there might be more than one (e.g, for matching or pooling):
            my $i = 0;
@@ -868,14 +861,15 @@ sub _expound { # Get the expectation, variance & observed N-sequences from each 
     $args->{'tails'} ||= 2;
     $args->{'ccorr'} = 1 if ! defined $args->{'ccorr'};
 
-    my $dev = Statistics::Zed->new(
-        ccorr => $args->{'ccorr'}, 
-        tails => $args->{'tails'}, 
+     my ($z, $pz, $obs_dev, $std_dev) = $self->{'zed'}->zscore(
+        observed => $obs_val,
+        expected => $exp_val,
+        variance => $var,
+        ccorr => $args->{'ccorr'},
+        tails => $args->{'tails'},
         precision_s => $args->{'precision_s'}, 
         precision_p => $args->{'precision_p'},
-    );
-
-    my ($z, $pz, $obs_dev, $std_dev) = $dev->zscore(observed => $obs_val, expected => $exp_val, variance => $var) if $var;
+     );
 
     # Lump values into class object:
     $self->{'observed'} = $obs_val;
@@ -885,6 +879,10 @@ sub _expound { # Get the expectation, variance & observed N-sequences from each 
     $self->{'obs_dev'} = $obs_dev;
     $self->{'std_dev'} = $std_dev;
     $self->{'variance'} = $var;
+    
+    # The following can only be hang-overs from any test of Vnomes:
+    $self->{'observed_stdev'} = undef;
+    $self->{'df'} = undef;
 
     $self->{'_tested'} = 1;
     $self->{'_tails'} = $args->{'tails'};
@@ -930,7 +928,7 @@ Kendall, M. G. (1973). I<Time-series>. London, UK: Griffin. [Describes the test 
 
 Schmidt, H. (2000). A proposed measure for psi-induced bunching of randomly spaced events. I<Journal of Parapsychology, 64,> 301-316. [Describes the pot-test.]
 
-Swed, F., & Eisenhart, C. (1943). Tables for testing randomness of grouping in a sequence of alternatives. I<Annals of Mathematical Statistics>, I<14>, 66-87. [Look in C<ex/checks.pl> in the installation dist for a several examples from this paper for testing.]
+Swed, F., & Eisenhart, C. (1943). Tables for testing randomness of grouping in a sequence of alternatives. I<Annals of Mathematical Statistics>, I<14>, 66-87. [Look in C<ex/checks.pl> in the CPAN installation dist for several examples from this paper for testing.]
 
 Wald, A., & Wolfowitz, J. (1940). On a test whether two samples are from the same population. I<Annals of Mathematical Statistics>, I<11>, 147-162. [Describes the runs-test.]
 

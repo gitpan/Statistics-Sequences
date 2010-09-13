@@ -1,6 +1,6 @@
 ---
 name: Statistics-Sequences
-version: 0.05
+version: 0.051
 author:
   - 'Roderick Garton <rgarton@cpan.org>'
 abstract: 'Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.'
@@ -13,29 +13,29 @@ build_requires:
   Scalar::Util: 1.18
   Statistics::Distributions: 1.02
   Statistics::Lite: 3.2
-  Statistics::Zed: 0.01
+  Statistics::Zed: 0.04
   Test::More: 0
 configure_requires:
   Module::Build: 0.340201
 provides:
   Statistics::Sequences:
     file: lib/Statistics/Sequences.pm
-    version: 0.05
+    version: 0.051
   Statistics::Sequences::Joins:
     file: lib/Statistics/Sequences/Joins.pm
-    version: 0.05
+    version: 0.051
   Statistics::Sequences::Pot:
     file: lib/Statistics/Sequences/Pot.pm
-    version: 0.05
+    version: 0.051
   Statistics::Sequences::Runs:
     file: lib/Statistics/Sequences/Runs.pm
-    version: 0.05
+    version: 0.051
   Statistics::Sequences::Turns:
     file: lib/Statistics/Sequences/Turns.pm
-    version: 0.01
+    version: 0.02
   Statistics::Sequences::Vnomes:
     file: lib/Statistics/Sequences/Vnomes.pm
-    version: 0.031
+    version: 0.04
 generated_by: Module::Build version 0.340201
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html

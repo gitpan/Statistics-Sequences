@@ -5,15 +5,13 @@ use strict;
 use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
-
 use Algorithm::Combinatorics qw(variations_with_repetition);
 use Math::Cephes 0.43;
-use Statistics::Zed 0.02;
-use Statistics::Sequences 0.05;
+use Statistics::Sequences 0.051;
 use Statistics::Lite qw(sum);
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.031';
+$VERSION = '0.04';
 
 =pod
 
@@ -25,20 +23,20 @@ Statistics::Sequences::Vnomes - The Serial Test (psi-square) and Generalized Ser
 
  use Statistics::Sequences::Vnomes;
  $vnomes = Statistics::Sequences::Vnomes->new();
- $vnomes->load(qw/1 0 0 0 1 1 0 1 1 0 0 1 0 0 1 1 1 1 0 1/);
+ $vnomes->load(\@data); # categorical
  $vnomes->test(length => 2)->dump();
 
 =head1 DESCRIPTION
 
 This module implements tests of the independence of successive elements of a sequence/series of data (list, vector, etc.) - specifically, "serial tests" for I<v>-nomes (a.k.a I<v>-plets or, for binary data, I<v>-bits) - what are call singlets/monobits, dinomes/doublets, trinomes/triplets, etc..
 
-Serial tests tell us if all the variations of the states, of a certain sub-sequence length, I<v>, that would be possible in the population from which the series has been sampled, are equally represented in the sample. For example, a sequence sampled from a "heads'n'tails" (H and T) distribution can be tested for its equal representation of the trinomes HTH, HTT, TTT, THT, and so on. Counting up these I<v>-nomes at all points in the series, permitting overlaps, yields a statistic - psi-square - that is approximately distributed as chi-square; the Kendall-Babington Smith statistic.
+Serial tests tell us if all the variations of the states, of a certain sub-sequence length, I<v>, that would be possible in the population from which the series has been sampled, are equally represented in the sample. For example, a sequence sampled from a "heads'n'tails" (H and T) distribution can be tested for its equal representation of the trinomes HTH, HTT, TTT, THT, and so on. Counting up these I<v>-nomes at all points in the series, permitting overlaps, yields a statistic - psi-square - that is approximately distributed as I<chi>-square; the Kendall-Babington Smith statistic.
 
-However, because these counts are not independent (given the overlaps), Good's Generalized Serial Test is more appropriate, and this is the default test-statistic returned by this module's C<test> routine. It computes psi-square by differencing, viz., in relation to not only the specified C<length>, or value of I<v>, but also its value for the first two prior lengths of I<v>, yielding a statistic, delta-square-psi-square (the "second backward difference" measure) that is exactly distributed as chi-square.
+However, because these counts are not independent (given the overlaps), Good's Generalized Serial Test is the default test-statistic returned by this module's C<test> routine: It computes psi-square by differencing, viz., in relation to not only the specified C<length>, or value of I<v>, but also its value for the first two prior lengths of I<v>, yielding a statistic, delta-square-psi-square (the "second backward difference" measure) that is I<exactly> distributed as I<chi>-square.
 
-The test is suitable for multi-state data, not only the binary, dichotomous series suitable for the Runs and Joins tests in this package. It can also be used to test that the individual elements in the list are uniformly distributed, that the states are equally represented, i.e., as a chi-square-based frequency test (a.k.a. test of uniformity, equiprobability, equidistribution). This is done by giving a C<length> of 1, i.e., testing for mononomes.
+The test is suitable for multi-state data, not only the binary, dichotomous series suitable for the Runs and Joins tests in this package. It can also be used to test that the individual elements in the list are uniformly distributed, that the states are equally represented, i.e., as a I<chi>-square-based frequency test (a.k.a. test of uniformity, equiprobability, equidistribution). This is done by giving a C<length> of 1, i.e., testing for mononomes.
 
-Note that this is I<not> the so-called serial test described by Knuth (1998, Ch. 2), which concerns non-overlapping pairs of sequences. Given this variety of definitions of what is a "serial test," this module - like that for Runs, Pot, etc. - is named after the basic construct tested - i.e., I<v>-nomes - rather than after any property of I<v>-nomes (seriality, successive independence, etc.).
+Note that this is I<not> the so-called serial test described by Knuth (1998, Ch. 2), which involves non-overlapping pairs of sequences. Given this variety of definitions of what is a "serial test," this module - like that for Runs, Pot, etc. - is named after the basic construct tested - i.e., I<v>-nomes - rather than after any property of I<v>-nomes (seriality, successive independence, etc.).
 
 =head1 METHODS
 
@@ -63,11 +61,13 @@ Loads data anonymously or by name. See L<load|Statistics::Sequences/load> in the
 
 Performs the Kendall-Babington Smith or (by default) Good's Generalized Serial Test of I<v>-nomes on the given or named distribution, yielding a I<psi-square> statistic.
 
-To test for the significance of the psi-square statistic, the raw psi-square value for sub-sequences of length I<v> is, by default, I<not> used - because, unless I<length> (I<v>) = 1, psi-square is not asymptotically distributed as chi-square. However, the differences between psi-square values for backwardly adjacent values of I<length> (I<v>) are asymptotically distributed as chi-square. By default, then, a "second backward differences" psi-square value is calculated, named (as per Good, 1953) as C<delta^2psi^2>, which makes use of the psi-square values for sub-sequences of length I<v>, I<v> - 1, and I<v> - 2. This statistic is logically (and has been empirically shown to be) not only chi-square distributed, but to offer statistically independent counts of all the possible variations of sequences of I<length> for the series in question. A practical upshot of this is that the square-root of C<delta^2psi^2> gives us a Z-value that, per the normal distribution, yields a I<p>-value that is equivalent to that calculated via the chi-square distribution on the basis of C<delta^2psi^2>. The I<Z>-value, however, that is returned when using the simple direct psi-square (as per Kendall & Babington Smith) is only approximate. [A future version might yield this I<Z>-value, inversely, from the I<p>-value itself.]
+To test for the significance of the psi-square statistic, the raw psi-square value for sub-sequences of length I<v> is, by default, I<not> used - because, unless I<length> (I<v>) = 1, psi-square is not asymptotically distributed as I<chi>-square. However, the differences between psi-square values for backwardly adjacent values of I<length> (I<v>) are asymptotically distributed as I<chi>-square. By default, then, a "second backward differences" psi-square value is calculated, named (as per Good, 1953) as C<del2psi2>, which makes use of the psi-square values for sub-sequences of length I<v>, I<v> - 1, and I<v> - 2. This statistic is logically (and has been mathematically shown to be) not only I<chi>-square distributed, but to offer statistically independent counts of all the possible variations of sequences of I<length> for the series in question. 
 
-Note that the "first backward differences" of psi-square, which is the difference between the psi-square values for sub-sequences of length I<v> and length I<v> - 1, is also not ordinarily returned. While it is chi-square distributed, counts of such first-differences are not statistically independent (Good, 1953; Good & Gover, 1967). This value can, however, be returned in place of the default by specifying C<delta> => 1. But note: "the sequence of second differences forms a much better set of statistics for testing the hypothesis of flat-randomness" (Good & Gover, 1967, p. 104) [compared to the first differences].
+Note that the "I<first> backward differences" of psi-square, which is the difference between the psi-square values for sub-sequences of length I<v> and length I<v> - 1, is not ordinarily returned. While it is I<chi>-square distributed, counts of such first-differences are not statistically independent (Good, 1953; Good & Gover, 1967). This value can, however, be returned in place of the default by specifying C<delta> => 1. But note: "the sequence of second differences forms a much better set of statistics for testing the hypothesis of flat-randomness" (Good & Gover, 1967, p. 104) [compared to the first differences].
 
-The algorithm implemented for psi-square is that given by Good (1953, Eq. 1); benchmarking shows no reliable speed difference to alternative forms of the equation given by Good (1957, Eq. 2) and in the NIST test suite (Rukhin et al., 2001). Good's original algorithm can also be found in individual papers describing the application of the Serial Test (e.g., Davis & Akers, 1974).
+For consistency with other modules in the L<Statistics::Sequences> package, the I<Z>-value associated with psi-square's probability is also computed, and this is what is printed in dumps. You can get the psi-square statistic itself, however, as $vnomes->{'psisq'}, noting that it will, according to your value of C<delta>, either be properly called I<del2psi2>, I<delpsi2> or I<psi2>.
+
+The algorithm implemented for psi-square is that given by Good (1953, Eq. 1); benchmarking shows no reliable speed difference to alternative forms of the equation, as given by Good (1957, Eq. 2) and in the NIST test suite (Rukhin et al., 2001). Good's original algorithm can also be found in individual papers describing the application of the Serial Test (e.g., Davis & Akers, 1974).
 
 By default, the I<p>-value associated with the test-statistic is 2-tailed. See the L<Statistics::Sequences|Statistics::Sequences/test> manpage for generic options other than the following Vnome test-specific ones. At the end of the test, the class object is lumped with the usual statistics; this time, however, the value of I<observed> is the average of the observed frequencies of each I<v>-nome, and an additional statistic, I<observed_stdev>, the standard deviation of the observed frequencies is also formed.
 
@@ -79,7 +79,7 @@ By default, the I<p>-value associated with the test-statistic is 2-tailed. See t
 
 The length of the I<v>-nome, i.e., the value of I<v>. Must be an integer greater than or equal to 1, and smaller than than the sample-size.
 
-What is a meaningful maximal value of C<length>? As a chi-square test, it could be held that there should be an expected frequency of at least 5 for each I<v>-nome. This is "conventional wisdom" recommended by Knuth (1988) but can be judged to be too conservative (Delucchi, 1993). The NIST documentation on the serial test (Rukhin et al., 2001) recommends that length should be less than the floored value of log2 of the sample-size, minus 2. No tests are here made of these recommendations, but if you choose to "dump" your results with verbosity (see C<dump>), you will get a note if the NIST warning would apply.
+What is a meaningful maximal value of C<length>? As a I<chi>-square test, it could be held that there should be an expected frequency of at least 5 for each I<v>-nome. This is "conventional wisdom" recommended by Knuth (1988) but can be judged to be too conservative (Delucchi, 1993). The NIST documentation on the serial test (Rukhin et al., 2001) recommends that length should be less than the floored value of log2 of the sample-size, minus 2. No tests are here made of these recommendations, but if you choose to "dump" your results with verbosity (see C<dump>), you will get a note if the NIST warning would apply.
 
 =item circularize
 
@@ -87,7 +87,7 @@ By default, circularizes the data series; i.e., the datum after the last element
 
 =item delta
 
-By default, the statistics are based on the second backward difference of psi-squares, i.e., as the Generalized Serial Test, as described by Good, see L<REFERENCES|REFERENCES>. If I<delta> => 0, the original Kendall-Babington Smith statistic is used.
+By default, the statistics are based on the second backward difference of psi-squares, i.e., as the Generalized Serial Test, as described by Good, see L<REFERENCES|Statistics::Sequences::Vnomes/REFERENCES>. If I<delta> => 0, the original Kendall-Babington Smith statistic (psi-square) is used. If I<delta> => 1, the value of C<psisq> is the first backward difference (delpsi2), as described above.
 
 =item states
 
@@ -167,7 +167,10 @@ sub test {
     $self->{'obs_dev'} = $self->{'observed'} - $self->{'expected'};
     $self->{'p_value'} = $p_value;
     $self->{'df'} = $df;
-    $self->{$delta ? $delta == 2 ? 'delta^2psi^2' : 'delta_psi^2' : 'psi^2'} = $psisq;
+    $self->{'_statname'} = $delta ? $delta == 2 ? 'del2psi2' : 'delpsi2' : 'psi2';
+    $self->{'psisq'} = $psisq;
+    
+    $self->{'z_value'} = $self->{'zed'}->p2z(value => $p_value, tails => $args->{'tails'});
 
     $self->{'_tested'} = 1;
 
@@ -178,14 +181,14 @@ sub test {
 
  $vnomes->dump(flag => '1|0', text => '0|1|2');
 
-Print Vnome-test results to STDOUT. See L<dump|Statistics::Sequences/dump> in the Statistics::Sequences manpage for details. After naming the test-statistic (C<delta^2psi^2> for the second difference measure, C<delta_psi^2> for the first difference measure, and C<psi^2> for the raw measure), the degrees-of-freedom follow in parentheses, and then the value of the test-statistic. If C<text> => 2, then you get a verbose telling of the inputs and results, including, if relevant, a warning if your C<length> value might be too large with respect to the sample size. Otherwise, you just get the average observed and expected frequencies for each I<v>-nome, the requested test-statistic (C<delta^2psi^2> by default), and its associated I<p>-value.
+Print Vnome-test results to STDOUT. See L<dump|Statistics::Sequences/dump> in the Statistics::Sequences manpage for details. For comparability with other modules in the Statistics::Sequences package, the I<Z>-value associated (by Math::Cephes::ndtri) with the obtained I<p>-value is reported. If C<text> => 2, then you get a verbose dump, including (1) the actual test-statistic depending on the value of C<delta> tested (C<del2psi2> for the second difference measure (default), C<delpsi2> for the first difference measure, and C<psi2> for the raw measure), followed by degrees-of-freedom in parentheses; and (2) a warning, if relevant, that your C<length> value might be too large with respect to the sample size (see NIST reference, above, in dicussing C<length>). If C<text> => 1, you just get the average observed and expected frequencies for each I<v>-nome, the I<Z>-value, and its associated I<p>-value.
+
+If you want to access the actual psi-square value that was tested against the I<chi>-square distribution, you can retrieve it as $vnomes->{'psisq'}.
 
 After testing, parameters named 'nstates' (the number of states), 'samplings' (the size of the sample), 'length' (what you requested) can be retrieved from the class object. You can retrieve the counts for each of the Vnomes in the series as a hash-reference named 'counts' in the class object, e.g.:
 
  print "No. of $vnomes->{'length'}-nome variations of $vnomes->{'nstates'} states among $vnomes->{'samplings'} samplings:\n";
- foreach (sort keys %{$vnomes->{'counts'}}) {
-     printf("\t%s\t%d\n", $_, $vnomes->{'counts'}->{$_});
- }
+ printf("\t%s\t%d\n", $_, $vnomes->{'counts'}->{$_}) foreach sort keys %{$vnomes->{'counts'}};
 
 =cut
 
@@ -194,27 +197,21 @@ sub dump {
 #-----------------------------------------------
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
-    my $stat_name = 'psi^2';
-    if ($self->{'delta'}) {
-        $stat_name = ($self->{'delta'} == 2 ? 'delta^2' : 'delta_') . $stat_name;
-    }
-    $args->{'stat_name'} = $stat_name;
 
-    if ($args->{'text'} and $args->{'text'} > 1) {
-        print '-' x 60 . "\n";
+    $args->{'testname'} = "Vnomes($self->{'length'})";
+ 
+    if ($args->{'text'} and $args->{'text'} > 1) { # verbosity
         my $n_vars = scalar(keys(%{$self->{'counts'}}));
-        print "Vnome test results:\n$n_vars $self->{'length'}-nome variations of $self->{'nstates'} states among $self->{'samplings'} observations:\n";
-        print '-' x 60 . "\n";
-        $args->{'testname'} = 'Vnomes';
+        $args->{'title'} = "Vnome test results:\n$n_vars $self->{'length'}-nome variations of $self->{'nstates'} states among $self->{'samplings'} observations:";
         $self->SUPER::_dump_verbose($args);
-        
+        printf(" %s (df = %d) = %f\n", $self->{'_statname'}, $self->{'df'}, $self->{'psisq'});
+        # "Warn" if the length to test was too long for the number of observations (as per NIST recommendation):
         if ($self->{'length'} > $self->{'lim'}) {
             my $stub = $self->{'lim'} == 1 ? 'of' : 'less than or equal to';
             print " Note: The V-nome length ($self->{'length'}) could be too large for the sample-size ($self->{'samplings'}); a length $stub $self->{'lim'} is optimal\n" ;
         }
      }
      else {
-        $args->{'testname'} = "Vnomes($self->{'length'})";
         $self->SUPER::_dump_sparse($args);
     }
     return $self;
@@ -289,7 +286,7 @@ sub _assess {# Test significance
 
     return ($psisq, $df, $p_value);
 }
- 
+
 __END__
 
 =head1 EXAMPLE
@@ -297,11 +294,11 @@ __END__
 =head2 Seating at the diner
 
 This is the data from Swed and Eisenhart (1943) also given as an example for the L<Runs test|Statistics::Sequences::Runs/EXAMPLE> and L<Turns test|Statistics::Sequences::Turns/EXAMPLE>. It lists the occupied (O) and empty (E) seats in a row at a lunch counter.
-Have people taken up their seats on a random basis? The Runs test suggested some non-random basis for people to take their seats, ouputting (as per C<dump>):
+Have people taken up their seats on a random basis? The Runs test suggested some non-random basis for people to take their seats, ouputting (per dump with text => 1):
 
   Runs: observed = 11.00, expected = 7.88, z = 1.60, 1p = 0.054834
 
-That means there was more serial discontinuity than expected. What does the test of Vnomes tell us?
+So there were more runs, or greater serial discontinuity, than expected. What does the test of Vnomes tell us?
 
  use Statistics::Sequences::Vnomes;
  my $vnomes = Statistics::Sequences::Vnomes->new();
@@ -311,11 +308,11 @@ That means there was more serial discontinuity than expected. What does the test
 
 This outputs, as returned by C<string>: 
 
- delta^2psi^2 (1) = 1, 2p = 0.317310507862914
+ Z = -0.475232849247084, 2p = 0.317310507862914
 
-That is, the observed frequency of each possible pair of seating arrangements (OO, OE, EE, EO) did not differ significantly from that expected. Taking a bigger picture, though, and changing the value of C<length> to 3, yields:
+That is, the observed frequency of each possible pair of seating arrangements (the dinomses OO, OE, EE, EO) did not differ significantly from that expected. Taking a bigger picture and widening our perspective, though, changing the value of C<length> to 3 so as to assess the equal representation of all possible I<tri>nomes, yields:
 
- delta^2psi^2 (2) = 6.25, 2p = 0.0539369336234074
+ Z = -1.70672129474387, 2p = 0.0439369336234074
 
 =head1 REFERENCES
 
@@ -345,6 +342,8 @@ Implementation of the serial test for non-overlapping I<v>-nomes.
 
 =head1 REVISION HISTORY
 
+v.051: Default test-statistic reported in "dumps" is now the I<Z>-value associated with the psi-square I<p>-value; whatever the manner of calculating psi-square (by differencing or not), it can itself be retrieved as $vnomes->{'psisq'}, and is also dumped, by name, if C<text> => 2 in a call to C<dump>.
+
 See CHANGES in installation dist for revisions.
 
 =head1 AUTHOR/LICENSE
@@ -365,6 +364,6 @@ To the maximum extent permitted by applicable law, the author of this module dis
 
 =head1 END
 
-This ends documentation of the Perl implementation of the chi-square, Kendall-Babington Smith, and Good's Generalized Serial Test for randomness in a sequence.
+This ends documentation of the Perl implementation of the I<chi>-square, Kendall-Babington Smith, and Good's Generalized Serial Test for randomness in a sequence.
 
 =cut

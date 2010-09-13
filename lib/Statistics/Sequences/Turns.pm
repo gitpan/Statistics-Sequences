@@ -6,11 +6,10 @@ use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
 use Scalar::Util qw(looks_like_number);
-use Statistics::Zed 0.02;
-use Statistics::Sequences 0.05;
+use Statistics::Sequences 0.051;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.01';
+$VERSION = '0.02';
 
 =pod
 
@@ -67,7 +66,7 @@ is counted up for turns as
 
 So, e.g., there are four turns in the above example - two peaks (0 1 0) and two troughs (1 0 1). (This would not be picked up as a non-random sequence, but if it were repeated, it would be seen to significantly deviate from expectation, I<p> = .035.)
 
-The observed number of turns is compared to the number expected, and this deviation is assessed against the expected deviation, i.e., as a Z-value; Kendall (1973) having observed that the statistic shows "a fairly rapid tendency of the distribution to normality" (p. 24). 
+The observed number of turns is compared to the number expected, and this deviation is assessed against the expected deviation, i.e., as a I<Z>-value; Kendall (1973) having observed that the statistic shows "a fairly rapid tendency of the distribution to normality" (p. 24). 
 
 =cut
 
@@ -130,7 +129,13 @@ sub dump {
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
     $args->{'testname'} = 'Turns';
-    $self->SUPER::_dump_pass($args);
+    if ($args->{'text'} and $args->{'text'} > 1) {
+        $args->{'title'} = "Turns test results:";
+        $self->SUPER::_dump_verbose($args);
+    }
+     else {
+        $self->SUPER::_dump_sparse($args);
+    }
     return $self;
 }
 

@@ -11,12 +11,12 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0,
         'Statistics::Lite' => 3.2,
-        'Statistics::Zed' => 0.01,
+        'Statistics::Zed' => 0.04,
         'Statistics::Distributions' => 1.02,
     	'Algorithm::Combinatorics' => '0.23',
-	    'Scalar::Util' => '1.18',
+	'Scalar::Util' => '1.18',
         'Math::Cephes' => '0.43',
     },
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'Statistics-Sequences-0.05-*' },
+    clean               => { FILES => 'Statistics-Sequences-0.051-*' },
 );

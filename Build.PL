@@ -10,13 +10,13 @@ my $builder = Module::Build->new(
     build_requires => {
         'Test::More' => 0,
         'Statistics::Lite' => 3.2,
-        'Statistics::Zed' => 0.01,
+        'Statistics::Zed' => 0.04,
         'Statistics::Distributions' => 1.02,
     	'Algorithm::Combinatorics' => '0.23',
-	    'Scalar::Util' => '1.18',
+	'Scalar::Util' => '1.18',
         'Math::Cephes' => '0.43',
     },
-    add_to_cleanup      => [ 'Statistics-Sequences-0.05-*' ],
+    add_to_cleanup      => [ 'Statistics-Sequences-0.051-*' ],
 );
 
 $builder->create_build_script();

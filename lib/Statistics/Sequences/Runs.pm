@@ -5,12 +5,10 @@ use strict;
 use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
-
-use Statistics::Zed 0.02;
-use Statistics::Sequences 0.05;
+use Statistics::Sequences 0.051;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.05';
+$VERSION = '0.051';
 
 =pod
 
@@ -31,7 +29,7 @@ The Runs-test assesses the difference between two independent distributions, or 
 
 A run is a sequence of identical states on 1 or more consecutive trials. For example, in a signal-detection test, there'll be a series, over time, of hits (H) and misses (M), which might look like H-H-M-H-M-M-M-M-H. Here, there are 5 runs: 3 of hits, and 2 of misses. This number of runs can be compared with the number expected to occur by chance, given the number of observed hits and misses. More runs than expected ("negative serial dependence") generally indicates irregularity, or instability; fewer runs than expected ("positive serial dependence") indicates regularity, or stability. Both can indicate a sequential dependency: either negative (an extra-chance factor, or bias, to produce too many alternations), or positive (an extra-chance factor, or bias, to produce too many repetitions).
 
-The distribution of runs is asymptotically normal - quite quickly, with probabilities well estimated by the normal distribution when both the numbers of H and M exceed 10 (e.g., Kelly, 1982). The deviation of the observed number of runs is therefore reliably assessed by way of a z-score.
+The distribution of runs is asymptotically normal - quite quickly, with probabilities well estimated by the normal distribution when both the numbers of H and M exceed 10 (e.g., Kelly, 1982). The deviation of the observed number of runs is therefore reliably assessed by way of a I<Z>-score.
 
 =head1 METHODS
 
@@ -118,7 +116,13 @@ sub dump {
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
     $args->{'testname'} = 'Runs';
-    $self->SUPER::_dump_pass($args);
+    if ($args->{'text'} and $args->{'text'} > 1) {
+        $args->{'title'} = "Runs test results:";
+        $self->SUPER::_dump_verbose($args);
+    }
+     else {
+        $self->SUPER::_dump_sparse($args);
+    }
     return $self;
 }
 
@@ -150,21 +154,21 @@ In a single run of a classic ESP test, there are 25 trials, each composed of a r
 
  use Statistics::Sequences::Runs;
 
- # Produce pseudo targets and responses:
+ # Produce pseudo ESP targets and responses:
  my ($i, @targets, @responses);
  for ($i = 0; $i < 250; $i++) {
     $targets[$i] = (qw/circle plus square star wave/)[int(rand(5))];
     $responses[$i] = (qw/circle plus square star wave/)[int(rand(5))];
  }
 
- # Do the run thing:
+ # Test for runs of matches between targets and responses:
  my $runs = Statistics::Sequences::Runs->new();
  $runs->load(targets => \@targets, responses => \@responses);
  $runs->match(data => [qw/targets responses/]);
  $runs->test();
  print "The probability of obtaining these $runs->{'observed'} runs is $runs->{'p_value'}\n";
 
- # But what if the responses were actually synchronised to the target on the trial one ahead?
+ # But let's test (preferably, if predicted) that the responses were matched to the target on the trial one ahead (as if by "precognition"):
  $runs->match(data => [qw/targets responses/], lag => 1)->test();
  print "With responses synchronised to targets on the next (+1) sample,\n 
  $runs->{'observed'} runs in 250 samplings were produced when $runs->{'expected'} were expected,\n 

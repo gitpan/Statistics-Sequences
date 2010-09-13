@@ -1,8 +1,8 @@
-Statistics-Sequences version 0.05
-=================================
+Statistics-Sequences version 0.051
+==================================
 
 Tests of sequential structure in the form of runs, joins, bunches, etc.
-Includes the Wald-Walfowitz Runs test, Helmut Schmidt's test of the "potential energy", or pot, of runs, and I. J. Good's version of the Serial Test for "v-nomes".
+Includes the Wald-Walfowitz Runs test, Helmut Schmidt's test of the "potential energy", or pot, of runs, I. J. Good's version of the Serial Test for "v-nomes", and Kendall's test of "turns".
 Test of significance are typically limited to approximations from the normal distribution, or as chi-square.
 Provides methods for dichotomising data where relevant for testing runs and joins.
 

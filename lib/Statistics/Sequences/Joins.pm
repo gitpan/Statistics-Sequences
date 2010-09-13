@@ -5,12 +5,10 @@ use strict;
 use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
-
-use Statistics::Zed 0.02;
-use Statistics::Sequences 0.05;
+use Statistics::Sequences 0.051;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.05';
+$VERSION = '0.051';
 
 =pod
 
@@ -121,7 +119,13 @@ sub dump {
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
     $args->{'testname'} = 'Joins';
-    $self->SUPER::_dump_pass($args);
+    if ($args->{'text'} and $args->{'text'} > 1) {
+        $args->{'title'} = "Joins test results:";
+        $self->SUPER::_dump_verbose($args);
+    }
+     else {
+        $self->SUPER::_dump_sparse($args);
+    }
     return $self;
  }
 

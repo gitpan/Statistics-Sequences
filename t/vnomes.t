@@ -10,12 +10,12 @@ isa_ok($seq, 'Statistics::Sequences::Vnomes');
 
 my %refdat = (
     nist => {
-        'delta^2psi^2' => 0.8,
+        psisq => 0.8,
         p_value => 0.67032,
     },
 	gatlin => {
-    'delta^2psi^2' => 36.2909090909091,
-    p_value => .45509,}
+        psisq => 36.2909090909091,
+        p_value => .45509,}
 );
 
 # Gatlin data:
@@ -28,7 +28,7 @@ ok(!$@, $@);
 
 $seq->test(length => 3, delta => 2, circularize => 1, states => [qw/A C G T/], precision_s => 3);
 
-foreach (qw/delta^2psi^2 p_value/) {
+foreach (qw/psisq p_value/) {
    ok(defined $seq->{$_} );
    ok(about_equal($seq->{$_}, $refdat{'gatlin'}->{$_}), "$_  $seq->{$_} = $refdat{'gatlin'}->{$_}");
 }
@@ -43,7 +43,7 @@ ok(!$@, $@);
 
 $seq->test(length => 3, delta => 2, states => [0, 1], precision_s => 3);
 
-foreach (qw/delta^2psi^2 p_value/) {
+foreach (qw/psisq p_value/) {
    ok(defined $seq->{$_} );
    ok(about_equal($seq->{$_}, $refdat{'nist'}->{$_}), "$_  $seq->{$_} = $refdat{'nist'}->{$_}");
 }

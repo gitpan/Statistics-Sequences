@@ -5,12 +5,10 @@ use strict;
 use warnings;
 use Carp 'croak';
 use vars qw($VERSION @ISA);
-
-use Statistics::Zed 0.02;
-use Statistics::Sequences 0.05;
+use Statistics::Sequences 0.051;
 @ISA = qw(Statistics::Sequences);
 
-$VERSION = '0.05';
+$VERSION = '0.051';
 
 =pod
 
@@ -186,21 +184,18 @@ sub dump {
 #-----------------------------------------------
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
+    $args->{'testname'} = "Pot ($self->{state})";
 
     if ($args->{'text'} and $args->{'text'} > 1) {
-        print '-' x 50 . "\n";
-        print "Pot test results for state $self->{'state'} among $self->{'samplings'} observations:\n";
-        print '-' x 50 . "\n";
-        print " No. of observations of state = $self->{'count'}\n";
-        print " No. of bunches of state = " . $self->{'bunches'}->count() . 
-                  ', with a mean length of '. sprintf('%.2f', $self->{'bunches'}->mean()) .
-                  ', and a mean spacing of '. sprintf('%.2f', $self->{'spaces'}->mean()) ." between each bunch.\n" if $self->{'bunches'};
-        print ' Pot calculated with a range of ' . sprintf('%.2f', $self->{'range'}) . " over a scale of $self->{'scale'}\n";   
-        $args->{'testname'} = 'Pot';
+        $args->{'title'} = "Pot test results for state '$self->{'state'}' among $self->{'samplings'} observations:\n" .
+        " No. of observations of state '$self->{'state'}' = $self->{'count'}\n";
+        $args->{'title'} .= " No. of bunches of state '$self->{'state'}' = " . $self->{'bunches'}->count() . 
+        ', with a mean length of '. sprintf('%.2f', $self->{'bunches'}->mean()) .
+        ', and a mean spacing of '. sprintf('%.2f', $self->{'spaces'}->mean()) ." between each bunch.\n" if $self->{'bunches'};
+        $args->{'title'} .=  ' (Calculated with a range of ' . sprintf('%.2f', $self->{'range'}) . " over a scale of $self->{'scale'})";   
         $self->SUPER::_dump_verbose($args);
      }
      else {
-        $args->{'testname'} = "Pot($self->{state})";
         $self->SUPER::_dump_sparse($args);
     }
     return $self;
@@ -439,7 +434,6 @@ To the maximum extent permitted by applicable law, the author of this module dis
 
 =head1 END
 
-This ends documentation of a Perl implementation of Helmut Schmidt's pot test (test of potential energy) for random occurrence of a single state among others in a sequence.
-
+This ends documentation of a Perl implementation of Helmut Schmidt's test of pot (potential energy) of occurrence of a state among others in a categorical sequence.
 
 =cut

@@ -1,11 +1,15 @@
 Revision history for Perl extension Statistics::Sequences.
 
-0.05 2010 Sept 12:
+0.051 2010 Sept 13:
+ + Statistics::Zed object cached during <new> so can be used repeatedly and shared between sub-modules
+ + Vnomes: computes z-value from psisquare's p-value and uses this in dumps (as do the other sub-modules)
+
+0.050 2010 Sept 12:
  + added sub-module Turns - test of turning-points as local peaks and troughs 
  + added binate method in main package
  + Vnomes: changed rounding to flooring for the NIST-prescribed limit of length
 
-0.05 2010 Sept: 
+0.04x 2010 Sept: 
  + added sub-module Vnomes - Good's serial test
  + clean-up dump sub: if text => 0 or undef, you get printed what's returned by the sub string 
  + cleaned-up generic <load> sub and associated private subs
