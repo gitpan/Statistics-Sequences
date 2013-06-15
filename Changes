@@ -1,5 +1,17 @@
 Revision history for Perl extension Statistics::Sequences.
 
+0.10 2013 May
+ + All methods for data-handling (load, read, add, unload) expanded and inherited from Statistics::Data
+ + Overhauled interface to the statistics and tests - using methods to get descriptives, etc. - see the PODs
+ + Have to name the "stat" you want for any of these methods, as well as for the "test"
+ + Sub-modules parcelled out to exist in the world by themselves
+ + Statistics::Zed object is no longer cached.
+
+0.052 2010 Sept 30
+ + Check that all options sent to <test> are valid ones
+ + Improve croak message for valid Vnomes test
+ + Values for the arguments 'tails' and 'ccorr' must be specified as arguments on each call - they are not cached
+
 0.051 2010 Sept 13:
  + Statistics::Zed object cached during <new> so can be used repeatedly and shared between sub-modules
  + Vnomes: computes z-value from psisquare's p-value and uses this in dumps (as do the other sub-modules)

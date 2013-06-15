@@ -1,17 +1,16 @@
 package Statistics::Sequences;
-
 use 5.008008;
 use strict;
 use warnings;
+use Statistics::Data;
+use vars qw(@ISA @EXPORT);
+use Exporter;
+@ISA = qw(Statistics::Data Exporter);
+#use Moose;
+#extends 'Statistics::Data';
 use Carp qw(croak cluck);
 use vars qw($VERSION);
-use Statistics::Descriptive;
-use Statistics::Zed 0.04;
-use Statistics::Lite qw(:funcs);
-use Scalar::Util qw(looks_like_number);
-
-$VERSION = '0.051';
-$| = 1;
+$VERSION = '0.10';
 
 =pod
 
@@ -21,594 +20,152 @@ Statistics::Sequences - Tests of sequences for runs, joins, bunches, turns, doub
 
 =head1 SYNOPSIS
 
-  use Statistics::Sequences;
+  use Statistics::Sequences 0.10;
   $seq = Statistics::Sequences->new();
-  my @data = ();
+  
+  my @data = (); # make it up:
   push @data, int(rand(2)) foreach 0 .. 300;
-  $seq->load(\@data); # or @data or dataname => \@data - note: dichotomous values
-  $seq->test(what => 'runs')->dump();
-  $seq->test(what => 'joins')->dump();
-  $seq->test(what => 'turns')->dump();
-  $seq->test(what => 'pot', state => 1)->dump();
-  $seq->test(what => 'vnomes', length => 2)->dump();
 
-  @data = ();
-  push @data, int(rand(10)) foreach 0 .. 300; # non-dichotomous, numerical values
-  $seq->test(what => 'pot', state => 1)->dump();
-  $seq->test(what => 'vnomes', length => 2)->dump();
-  $seq->test(what => 'turns')->dump();
-  $seq->swing(); # one of several dichotomization transforms, needed for testing Runs and Joins:
-  $seq->test(what => 'runs')->dump();
-  $seq->test(what => 'joins', )->dump();
- 
+  $seq->load(\@data); # or @data or dataname => \@data
+  print $seq->observed(stat => 'runs'); # expected, variance, z_value, p_value
+  print $seq->observed(stat => 'pot', state => 1); # expected, variance, z_value, p_value
+  print $seq->test(stat => 'vnomes', length => 2); # length of "v" (for mononomes/singlets, dinomes/doublets, etc.)
+  $seq->dump(stat => 'runs', values => {observed => 1, z_value => 1, p_value => 1}, exact => 1, tails => 1);
 
 =head1 DESCRIPTION
 
-Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Examples of the use of each test are given in these pages.
+Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot>, L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Examples of the use of each test are given in these pages.
 
-In general, to access the tests, you L<use|perlfunc/use> this base module to directly create a Statistics::Sequences object with the L<new|new> method, L<load|load> data into it, and then access each test by calling the L<test|test> method. This approach is useful for running several tests on the same data, as the data are immediately available to each test (of runs, joins, pot or vnomes). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example.
+In general, to access the tests, you L<use|perlfunc/use> this base module to directly create a Statistics::Sequences object with the L<new|new> method. You then L<load|load> data into it, and then access each test by calling the L<test|test> method and specifying the B<stat> attribute: either joins, pot, runs, turns or vnomes. This way, you can run several tests on the same data, as the data are immediately available to each test (of joins, pot, runs, turns or vnomes). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example. 
 
-If you only want to perform a test of one type (e.g., runs), you might want to simply L<use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS>, L<Turns|Statistics::Sequences::Turns/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
+Otherwise, you can L<use|perlfunc/use> each sub-module directly, and restrict your analyses to the sub-module's test. That is, if you only want to perform a test of one type (e.g., runs), you might simply L<use|perlfunc/use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS>, L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Turns|Statistics::Sequences::Turns/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests of the same data by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
 
-There are also methods to anonymously or nominally cache data, and that data might need to be reduced to a dichotomous format, before a valid test can be run. Several dichotomising methods are provided, once data are loaded, and accessible via the generic or specific class objects, as above.
+There are also methods to anonymously or nominally cache data, and that data might need to be reduced to a dichotomous format, before a valid test can be run. Several dichotomizing methods are provided, once data are loaded, and accessible via the generic or specific class objects, as above.
 
 =head1 METHODS
-
-=head2 Interface
 
 The package provides an object-oriented interface for performing the tests of sequences in the form of L<Runs|Statistics::Sequences::Runs>, L<Joins|Statistics::Sequences::Joins>, L<Pot(ential energy)|Statistics::Sequences::Pot>, L<Turns|Statistics::Sequences::Turns> or L<Vnomes|Statistics::Sequences::Vnomes>. 
 
 Most methods are named with aliases, should you be used to referring to Perl statistics methods by one or another of the many conventions. Present conventions are mostly based on those used in Juan Yun-Fang's modules, e.g., L<Statistics::ChisqIndep|Statistics::ChisqIndep>.
 
-=head3 new
+=head2 new
 
  $seq = Statistics::Sequences->new();
 
-Returns a new Statistics::Sequences object by which all the methods for caching, dichotomising, and testing data can be accessed, including each of the methods for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins>, L<Pot-|Statistics::Sequences::Pot>, L<Turns-|Statistics::Sequences::Turns> or L<Vnomes-|Statistics::Sequences::Vnomes>tests.
+Returns a new Statistics::Sequences object (inherited from L<Statistics::Data|Statistics::Data>) by which all the methods for caching, reading and testing data can be accessed, including each of the methods for performing the L<Runs-|Statistics::Sequences::Runs>, L<Joins-|Statistics::Sequences::Joins>, L<Pot-|Statistics::Sequences::Pot>, L<Turns-|Statistics::Sequences::Turns> or L<Vnomes-|Statistics::Sequences::Vnomes>tests.
 
-Any one of the sub-packages, such as L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, can be individually imported, and its own L<new|new> method can be called, e.g.:
+Sub-packages also have their own new method - so, e.g., L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, can be individually imported, and its own L<new|new> method can be called, e.g.:
 
  use Statistics::Sequences::Runs;
  $runs = Statistics::Sequences::Runs->new();
 
 In this case, data are not automatically shared across packages, and only one test (in this case, the Runs-test) can be accessed through the class-object returned by L<new|new>.
 
-=cut
+=head2 load, add, unload, dump, string
 
-#-----------------------------------------------
-sub new {
-#-----------------------------------------------
-    my ($proto, %args) = (shift, @_);
-    my $class = ref($proto) || $proto;
-    my $self= {};
-    bless($self, $class);
-    $self->{'zed'} = Statistics::Zed->new();
-    return $self;
-}
+All these operations on the basic data are inherited from L<Statistics::Data|Statistics::Data> - see L<Statistics::Data> for details.
 
-=head2 Caching data
+B<Dichotomous data>: Both the runs- and joins-tests expect dichotomous data: a binary or binomial or Bernoulli sequence, but with whatever characters to symbolize the two possible events. They test their "loads" to make sure the data are dichotomous. To reduce numerical and categorical data to a dichotomous level, see the L<pool|Statistics::Data::Dichotomize/pool>, L<match|Statistics::Data::Dichotomize/match>, L<split|Statistics::Data::Dichotomize/split, cut>, L<swing|Statistics::Data::Dichotomize/swing>, L<shrink (boolwin)|Statistics::Data::Dichotomize/shrink, boolwin> and other methods in L<Statistics::Data::Dichotomize>.
 
-=head3 load
+=head2 observed, observation
 
- $seq->load(@data); # Anonymous load
- $seq->load(\@data); # Anonymously referenced load
- $seq->load(blues => \@blue_scores, reds => \@red_scores); # Named loads
- $seq->load({blues => \@blue_scores, reds => \@red_scores}); # Same, but referenced
+ $v = $seq->observed(stat => 'joins|pot|runs|turns|vnomes', %args); # gets data from cache, with any args needed by the stat
+ $v = $seq->observed(stat => 'joins|pot|runs|turns|vnomes', data => [qw/blah bing blah blah blah/]); # just needs args for partic.stats
+ $v = $seq->observed(stat => 'joins|pot|runs|turns|vnomes', label => 'myLabelledLoadedData'); # just needs args for partic.stats
 
-I<Aliases:> C<load_data>
-
-Cache an anonymous list of data as an array-reference, or named data-sets as a hash reference, accessible as C<$seq-E<gt>{'data'}>, and available over any number of tests. Each call to L<load|load> removes whatever might have been previously loaded. Sending nothing deletes all loaded data (by C<undef>fing C<$seq-E<gt>{'data'}>); sending another list makes another set of data available for testing.
-
-Anonymous and named loading, and function aliases, are provided given the variety of such methods throughout the Statistics modules. Telling the difference between an unreferenced array (for anonymous loading) and an unreferenced hash (for nominal loading) is simply performed on the basis of the second element: if it's a reference, the list is taken as a hash, otherwise as an array. Inelegant, but accommodating.
+Return the observed value of the statistic for the L<load|Statistics::Sequences/load>ed data, or data sent with this call, eg., how many runs in the sequence (1, 1, 0, 1). See the particular statistic's manpage for any other arguments needed or optional. 
 
 =cut
 
-#-----------------------------------------------        
-sub load {
-#-----------------------------------------------        
-    my $self = shift;
+sub observed { return _feedme('observed', @_); } *observation = \&observed;
 
-    $self->unload();
+=head2 expected, expectation
 
-    my %tmp_dat = ();
-    
-    if (ref($_[0])) {
-       $self->{'data'} = $_[0]; # datawhat => \@data } or \@data
-    }
-    elsif (ref($_[1])) { # (datawhat => \@data)
-        $self->{'data'} = {@_};
-    }
-    else {
-        $self->{'data'} = \@_; # (@data)
-    }
+ $v = $seq->expected(stat => 'joins|pot|runs|turns|vnomes', %args); # gets data from cache, with any args needed by the stat
+ $v = $seq->expected(stat => 'joins|pot|runs|turns|vnomes', data => [qw/blah bing blah blah blah/]); # just needs args for partic.stats
 
-    $self->{'_tested'} = 0;
-
-    return $self;
-}
-
-=head3 add
-
- $seq->add_data($char1, $char2)
- $seq->add_data([$char1, $char2])
- $seq->add_data({ reds => 1})
-
-I<Aliases:> C<add_data>, C<append>, C<append_data>
-
-Just push any value(s) or so along, without clobbering what's already in there (as L<load_data|load_data> would).
+Return the expected value of the statistic for the L<load|Statistics::Sequences/load>ed data, or data sent with this call, eg., how many runs should occur in a 4-length sequence of two possible events. See the statistic's manpage for any other arguments needed or optional.
 
 =cut
 
-#-----------------------------------------------        
-sub add {
-#-----------------------------------------------        
-    my $self = shift;
+sub expected { return _feedme('expected', @_); } *expectation = \&expected;
 
-    $self->{'testdata'} = undef;
-    $self->{'data'} = undef;
+=head2 variance
 
-    my %tmp_dat = ();
-    
-    if (ref($_[0])) {
-       if (ref($_[0]) eq 'HASH') { 
-             %tmp_dat = %{$_[0]};
-       }
-       else { 
-            push @{$self->{'data'}}, $_[0];
-       }
-    }
-    elsif (scalar @_) {
-        if (ref($_[1])) {
-            %tmp_dat = @_;
-        }
-        else {
-            push @{$self->{'data'}}, @_;
-        }
-    }
-        
-    while (my($k, $v) = each %tmp_dat ) {
-        push @{ $self->{'data'}->{$k}}, $v;
-    }    
+ $seq->variance(stat => 'joins|pot|runs|turns|vnomes', %args); # gets data from cache, with any args needed by the stat
+ $seq->variance(stat => 'joins|pot|runs|turns|vnomes', data => [qw/blah bing blah blah blah/]); # just needs args for partic.stats
 
-    $self->{'_tested'} = 0;
- 
-    return $self;
-}
-
-=head3 read
-
- $seq->read()
-
-Alias: C<get_data>
-
-Return the hash of data (just return $seq->{'data'}).
+Returns the expected range of deviation in the statistic's observed value for the given number of trials. 
 
 =cut
 
-#-----------------------------------------------
-sub read {
-#-----------------------------------------------
-    my $self = shift;
-    return $self->{'data'};
-}
+sub variance { return _feedme('variance', @_); }
 
-=head3 unload
+=head2 obsdev, observed_deviation
 
- $seq->unload()
+ $v = $seq->obsdev(stat => 'joins|pot|runs|turns|vnomes', %args); # gets data from cache, with any args needed by the stat
+ $v = $seq->obsdev(stat => 'joins|pot|runs|turns|vnomes', data => [qw/blah bing blah blah blah/]); # just needs args for partic.stats
 
-Alias: C<clear_data>, C<delete_data>
-
-Empty, clear, clobber what's in there. This is always performed ahead of any C<load>.
+Returns the deviation of (difference between) observed and expected values of the statistic for the loaded/given sequence (I<O> - I<E>). 
 
 =cut
 
-sub unload {
-    my $self = shift;
-    $self->{$_} = undef foreach qw/testdata data test observed_stdev df/;
-    $self->{$_} = 0 foreach qw/samplings expected observed variance std_dev obs_dev z_value _tested/;
-    $self->{$_} = 1 foreach qw/p_value _ccorr/;
-    $self->{$_} = 2 foreach qw/_tails/;
+sub obsdev {
+    return observed(@_) - expected(@_);
 }
+*observed_deviation = \&obsdev;
 
-=head2 Dichotomising data
+=head2 stdev, standard_deviation
 
-Both the runs- and joins-tests expect dichotomous data, i.e., as if there were only two categorical variables. If your data isn't in this format, numerical and multi-valued categorical data, once loaded, can be "reduced" to this format by the following methods, namely, L<cut|cut>, L<swing|swing>, L<pool|pool> and L<match|match>. Both the runs- and joins-test will C<croak> if more (or less) than two states are found in the data.
+ $v = $seq->stdev(stat => 'joins|pot|runs|turns|vnomes', %args); # gets data from cache, with any args needed by the stat
+ $v = $seq->stdev(stat => 'joins|pot|runs|turns|vnomes', data => [qw/blah bing blah blah blah/]); # just needs args for partic.stats
 
-Each method stores the data in the class object as an array-reference named "testdata", accessible so:
-
- print 'dichotomous data: ', @{$seq->{'testdata'}}, "\n";
-
-=head3 Numerical data: Single-sample dichotomisation
-
-=head4 cut
-
- $seq->cut(value => 'median', equal => 'gt'); # cut anonymously cached data at a central tendency
- $seq->cut(value => 23); # cut anonymously cached data at a specific value
- $seq->cut(value => 'mean', data => 'blues'); # cut named data at its average
-
-I<This method is only suitable for numerical data.>
-
-Reduce loaded data to two categories by cutting it about a certain value. For example, the following raw data, when cut for values greater than or equal to 5, yield the subsequent dichotomous series.
-
- @raw_data = (4, 3, 3, 5, 3, 4, 5, 6, 3, 5, 3, 3, 6, 4, 4, 7, 6, 4, 7, 3);
- @cut_data = (0, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0, 0, 1, 0, 0, 1, 1, 0, 1, 0);
-
-The following options may be specified.
-
-=over 8
-
-=item value => 'mean|median|mode|\d+'
-
-Specify the value at which the data will be cut. This could be the mean, median or mode (as calculated by L<Statistics::Lite|Statistics::Lite>), or a numerical value within the range of the data. The default is the I<median>. The cut-value, as specified by C<value>, can be retrieved thus:
-
- print $seq->{'cut_value'};
-
-=item equal => 'I<gt>|I<lt>|I<0>'
-
-This option specifies how to cut the data should the cut-value (as specified by C<value>) be present in the data. The default value is 0: observations equal to the cut-value are skipped. If C<equal =E<gt> I<gt>>: all data-values I<greater than or equal to> the cut-value will form one group, and all data-values less than the cut-value will form another. To cut with all values I<less than or equal to> in one group, and higher values in another, set this parameter to I<lt>.
-
-=item data => 'I<string>'
-
-Specify which named cached data-set to cut.
-
-=back
+Returns square-root of the variance.
 
 =cut
 
-#-----------------------------------------------
-sub cut {
-#-----------------------------------------------
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : {@_};
-    my $dat = $self->_rawdata_aref($args->{'data'});
-    
-    # Ensure data can be numerically cut before sending off to Statistics-Lite for doing so (doesn't work if simply using Lite::sum):
-    foreach (@{$dat}) {
-        croak __PACKAGE__, '::cut All data must be numerical for dichotomizing about a cut-value' if ! looks_like_number($_);
-    }
- 
-    # Get a cut-value:
-    if ((!$args->{'value'}) or ($args->{'value'} =~ /^[a-z]+$/i and $args->{'value'} !~ /^m(e(an|dian)|ode)/)) {
-        $args->{'value'} = 'median';
-    }
-
-    if ($args->{'value'} =~ /^[a-z]+$/i) {
-        no strict 'refs';
-        $self->{'cut_value'} = &{$args->{'value'}}(@{$dat}); # using Statistics-Lite methods
-    }
-    else {
-        $self->{'cut_value'} = $args->{'value'};
-    }
-
-    # Find the number of observations above and below the cut_value:
-    my @seqs = ();
-    foreach (@{$dat}) {
-        if ($_ > $self->{'cut_value'}) {
-            push @seqs, 1;
-        }
-        elsif ($_ < $self->{'cut_value'}) {
-            push @seqs, 0;
-        }
-        elsif ($_ == $self->{'cut_value'}) {
-             if (defined $args->{'equal'}) {
-                if ($args->{'equal'} eq 'gt') {
-                    push @seqs, 1;
-                }
-                elsif ($args->{'equal'} eq 'lt') {
-                    push @seqs, 0;
-                }
-                else {
-                    next;
-                }
-            }
-            else {
-                next;
-            }
-        }
-    }
-
-    $self->{'testdata'} = \@seqs;
-    return $self;
+sub stdev {
+    return sqrt(variance(@_));
 }
+*standard_deviation = \&stdev;
 
-=head4 swing
+=head2 z_value, zscore
 
- $seq->swing();
- $seq->swing(data => 'reds'); # if more than one are loaded, or a single one was loaded with a name
+ $v = $seq->zscore(stat => 'joins|pot|runs|turns|vnomes', %args); # gets data from cache, with any args needed by the stat
+ $v = $seq->zscore(stat => 'joins|pot|runs|turns|vnomes', data => [qw/blah bing blah blah blah/]); # just needs args for partic.stats
 
-This is another transformation that, like the L<cut|cut> method, can be used to produce a dichotomous sequence from a single set of numerical data. You essentially test the degree of consistency of the rises and falls in the data. Each element in the named data-set is subtracted from its successor, and the result is replaced with a 1 if the difference represents an increase, or 0 if it represents a decrease. For example, the following numerical series produces the subsequent dichotomous series.
-
- @values = (qw/3 4 7 6 5 1 2/);
- @dicho =  (qw/1 1 0 0 0 1/);
-
-Dichotomously, the data can be seen as commencing with an ascending run of length 2, followed by a descending run of length 3, and finishing with a short increase. Note that the number of resulting observations is less than the original number.
-
-Note that the critical region of the distribution lies (only) in the upper-tail; a one-tailed test of significance is appropriate.
-
-=over 8
-
-=item equal => 'I<gt>|I<lt>|I<rpt>|I<0>'
-
-The default result when the difference between two successive values is zero is to skip the observation, and move onto the next succession (C<equal =E<gt> 0>). Alternatively, you may wish to repeat the result for the previous succession; skipping only a difference of zero should it occur as the first result (C<equal =E<gt> 'rpt'>). Or, a difference greater than or equal to zero is counted as an increase (C<equal =E<gt> 'gt'>), or a difference less than or equal to zero is counted as a decrease. For example, 
-
- @values =    (qw/3 3 7 6 5 2 2/);
- @dicho_def = (qw/1 0 0 0/); # First and final results (of 3 - 3, and 2 - 2) are skipped
- @dicho_rpt = (qw/1 0 0 0 0/); # First result (of 3 - 3) is skipped, and final result repeats the former
- @dicho_gt =  (qw/1 1 0 0 0 1/); # Greater than or equal to zero is an increase
- @dicho_lt =  (qw/0 1 0 0 0 0/); # Less than or equal to zero is a decrease
-
-=back
+Return the deviation ratio: observed deviation to standard deviation. Use argument B<ccorr> for continuity correction.
 
 =cut
 
-#-----------------------------------------------
-sub swing {
-#-----------------------------------------------
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : {@_};
-    my $dat = $self->_rawdata_aref($args->{'data'});
+sub zscore { return _feedme('zscore', @_); } *z_value = \&zscore;
 
-    # Replace observations with the succession of rises and falls:
-    my ($i, @seqs) = ();
-    for ($i = 0; $i < (scalar @{$dat} - 1); $i++) {
-        croak __PACKAGE__, '::swing All data must be numerical for dichotomizing into ups and downs' if ! looks_like_number($dat->[$i]);
-        my $res = $dat->[($i + 1)] - $dat->[$i];
-        if ($res > 0) {
-            push @seqs, 1;
-        }
-        elsif ($res < 0) {
-            push @seqs, 0;
-        }
-        else {
-            if (defined $args->{'equal'}) {
-                if ($args->{'equal'} eq 'rpt') {
-                    push @seqs, $seqs[-1] if scalar @seqs; 
-                }
-                elsif ($args->{'equal'} eq 'gt') {
-                    push @seqs, 1;
-                }
-                elsif ($args->{'equal'} eq 'lt') {
-                    push @seqs, 0;
-                }
-                else {
-                    next;
-                }
-            }
-            else {
-                next;
-            }
-        }
-    }
-    $self->{'testdata'} = \@seqs;
-    return $self;
-}
+=head2 p_value, test
 
-=head3 Numerical data: Two-sample dichotomisation
+ $p = $seq->test(stat => 'runs');
+ $p = $seq->test(stat => 'joins');
+ $p = $seq->test(stat => 'turns');
+ $p = $seq->test(stat => 'pot', state => 'a value appearing in the data');
+ $p = $seq->test(stat => 'vnomes', length => 'an integer greater than zero and less than sample-size');
 
-=head4 pool
-
- $seq->pool('data' => ['blues', 'reds']);
-
-Constructs a single series out of two series of cached I<numerical> data as a ranked pool, i.e., by pooling the data from each series according to the magnitude of their values at each trial. This is the typical option when using the Wald-Walfowitz test for determining a difference between two samples. Specifically, the values from both samples are pooled and ordered from lowest to highest, and then clustered into runs according to the sample from which neighbouring values come from. Another run occurs wherever there is a change in the source of the values. A non-random effect of, say, higher or lower values consistently coming from one sample rather than another, would be reflected in fewer runs than expected by chance. See the C<ex/checks.pl> file in the CPAN installation distribution for a couple examples.
-
-See also the methods for categorical data where it is ok to ignore any order and intervals in your numerical data.
-
-=cut
-
-#-----------------------------------------------
-sub pool {
-#-----------------------------------------------
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : {@_};
-    croak __PACKAGE__, '::pool Two samples of data for pooling need to be loaded' if !$args->{'data'} or ref $args->{'data'} ne 'ARRAY' or !scalar @{$args->{'data'}} or scalar @{$args->{'data'}} != 2;
-
-    my ($tot, %dat) = (0);
-
-    foreach (@{$args->{'data'}}) {
-        croak __PACKAGE__, '::pool Data named \'', $_, '\' for pooling do not exist' if ! @{$self->{'data'}->{$_}};
-        $dat{$_} = [sort {$a <=> $b} @{$self->{'data'}->{$_}}];
-        $tot += scalar(@{$dat{$_}});
-    }
- 
-    my ($i, $aa, $bb, @testdata) = ();
-    while (scalar(@testdata) < $tot) {
-        $aa = $dat{$args->{'data'}->[0]}->[0];
-        $bb = $dat{$args->{'data'}->[1]}->[0];
-        #croak __PACKAGE__, '::pool All data must be numerical for dichotomizing into a ranked pool' if ! looks_like_number($aa) || ! looks_like_number($bb);
-        $i = defined $aa && defined $bb ? $aa < $bb ? 0 : 1 : defined $aa ? 0 : 1;
-        shift @{$dat{$args->{'data'}->[$i]}};
-        push @testdata, $args->{'data'}->[$i];
-    }
- 
-    $self->{'testdata'} = \@testdata;
-    return $self;
-}
-
-=head3 Categorical data
-
-=head4 match
-
- $seq->match('data' => ['blues', 'reds']);
-
-Reduce two lists of loaded data to two categories in a single array, according to the match between the elements at each index. Where the data-values are equal at a certain index, they will be represented with a 1; otherwise a 0. Numerical or stringy data can be equated. For example, the following two arrays would be reduced to the third, where a 1 indicates a match of identical values in the two data sources.
-
- @blues = (qw/1 3 3 2 1 5 1 2 4/);
- @reds =  (qw/4 3 1 2 1 4 2 2 4/);
- @dicho = (qw/0 1 0 1 1 0 0 1 1/);
-
-The following options may be specified.
-
-=over 8
-
-=item data => [qw/blues reds/]
-
-Specify, a referenced array, two named data-sets, as previously passed to L<load|load>. An attempt to match a number of data-sets other than 2 will emit a C<croak>.
-
-=item lag => I<integer> OR [I<integer>, B<I<loop>> (I<boolean>)] (where I<integer> < number of observations I<or> I<integer> > -1 (number of observations) ) 
-
-Match the two data-sets by shifting the first named set ahead or behind the other data-set by C<lag> observations. The default is zero. For example, one data-set might be targets, and another responses to the targets:
-
- targets   =	cbbbdacdbd
- responses =	daadbadcce
-
-Matched as a single sequence of hits (1) and misses (0) where C<lag> = B<0> yields (for the match on "a" in the 6th index of both arrays):
-
- 0000010000
-
-If C<lag> is set to B<+1>, however, each response is associated with the target one ahead of the trial for which it was observed; i.e., each target is shifted to its +1 index. So the first element in the above responses (I<d>) would be associated with the second element of the targets (I<b>), and so on. Now, matching the two data-sets with a B<+1> lag gives two hits, of the 4th and 7th elements of the responses to the 5th and 8th elements of the targets, respectively:
-
- 000100100
-
-Note that with a lag of zero, there were 3 runs of (a) hit/s or miss/es, but with a lag of 1, there were 5 runs.
-
-Lag values can be negative, so that a B<-2> lag, for instance, will give a hit/miss series of:
-
- 00101010
-
-Here, responses necessarily start at the third element (I<a>), the first hits occurring when the fifth response-element corresponds to the the third target element (I<b>).
-
-In the above example, the last response (I<e>) could not be used, and the number of elements in the hit/miss sequence became n-C<lag> less the original target sequence. This means that the maximum value of lag must be one less the size of the data-sets, or there will be no data.
-
-You can, alternatively, preserve all lagged data by looping any excess to the start or end of the criterion data. The number of observations will then always be the same, regardless of the lag. Matching the data in the example above with a lag of +1, with looping, creates an additional match between the final response and the first target (I<d>):
-
- 1000100100
-
-To effect looping, send a referenced list of the lag and a boolean for the loop, e.g., :
-
- lag => [-3, 1]
-
-=back
-
-=cut
-
-#-----------------------------------------------
-sub match {
-#-----------------------------------------------
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : {@_};
-    my $dat = $self->_rawdata_aref($args->{'data'});
-
-    croak __PACKAGE__, '::match Names of two loaded data-sets are required for matching' if scalar @{$dat} != 2 or !ref $dat->[0] || !ref $dat->[1];
-    
-    $dat = $self->lag($args->{'lag'}, $dat->[0], $dat->[1]) if $args->{'lag'};
-
-    # Ensure the criterion data-set is the set with the least observations:
-    my $ari = scalar @{$dat->[0]} <= scalar @{$dat->[1]} ? $dat->[0] : $dat->[1];
-
-    my ($i, @seqs) = ();
-    for ($i = 0; $i < scalar @{$ari}; $i++) {
-        next if !defined $dat->[0]->[$i] || !defined $dat->[1]->[$i];
-        $seqs[$i] = $dat->[0]->[$i] eq $dat->[1]->[$i] ? 1 : 0;
-    }
-    $self->{'testdata'} = \@seqs;
-    return $self;
-}
-
-#-----------------------------------------------
-sub lag {
-#-----------------------------------------------
-    my ($self, $lag, $t, $r) = @_;
-   
-    my $loop;
-    if (ref $lag) {
-        $loop = $lag->[1];
-        $lag = $lag->[0];
-    }
-    else {
-        $loop = 0;
-    }
-   
-    return [$t, $r] if !$lag or abs($lag) >= scalar @{$t};
-    
-    my @tgt = @{$t};
-    my @rsp = @{$r};
-    
-    if ($lag > 0) {
-        foreach (1 .. abs($lag) ) {
-            if ($loop) {
-                unshift(@rsp, pop @rsp);
-            }
-            else {
-                shift @tgt;
-                pop @rsp;
-            }
-        }
-    }
-    elsif ($lag < 0) {
-        foreach (1 .. abs($lag) ) {
-            if ($loop) {
-                push(@rsp, shift @rsp);
-            }
-            else {
-                pop @tgt;
-                shift @rsp;
-            }
-        }
-    }
-    return [\@tgt, \@rsp];
-}
-
-=head4 binate
-
- $seq->binate(oneis => 'E'); # optionally specify a state in the sequence to be set as "1"
- $seq->binate(oneis => 'E', data => 'targets'); # if more than one data sequence is loaded, specify which one by name
-
-A basic utility to convert a list of dichotomous categories into a list of 1s and zeroes, setting the first element in the list to 1 (or whatever is specified as "oneis") on all its occurrences in the list, and all other values in the list to zero. This is simply useful if you have categorical data with two states that, without assuming they have numerical properties, could still be assessed for, say, runs up-and-down, or turning-points. Naturally, this conversion is not meaningful, and should usually not be used, if the data are not categorically dichotomous, e.g., if they consist of the four DNA letters, or the five Zener symbols.
-
-=cut
-
-#-----------------------------------------------
-sub binate {
-#-----------------------------------------------
-    my $self = shift;
-    my $args = ref $_[0] ? $_[0] : {@_};
-    my $dat = $self->_rawdata_aref($args->{'data'});
-
-    # What value should be set to 1 and others to zero? Either as given, or the first value in the sequence:
-    my $oneis = defined $args->{'oneis'} ? delete $args->{'oneis'} : $dat->[0];
-
-    # Replace observations with 1s and 0s:
-    $self->{'testdata'} = [map {$_ eq $oneis ? 1 : 0} @{$dat}];
-    return $self;
-}
-
-=head2 Testing data
-
-=head3 test
-
- $seq->test(what => 'runs');
- $seq->test(what => 'joins');
- $seq->test(what => 'turns');
- $seq->test(what => 'pot', state => 'a value appearing in the testdata');
- $seq->test(what => 'vnomes', length => 'an integer greater than zero and less than sample-size');
-
- $runs->test();
- $joins->test(prob => 1/2);
- $pot->test(state => 'circle');
- $vnomes->test(length => 3);
-
-I<Alias:> C<process>
+Returns the probability of observing so many runs, joins, etc., versus those expected, relative to the expected variance.
 
 When using a Statistics::Sequences class-object, this method requires naming which test to perform, i.e., runs, joins, pot or vnomes. This is I<not> required when the class-object already refers to one of the sub-modules, as created by the C<new> method within L<Statistics::Sequences::Runs|Statistics::Sequences::Runs/new>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/new>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/new>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns/new> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/new>.
 
-Note that simply giving the first argument as the name, unkeyed, is deprecated, and will be removed in the next version; i.e., don't just use, e.g.:
+=head3 General options
 
- $seq->test('runs'); # verboten - nicht mehr erlaubt!
-
-=head4 General options
-
-Options to L<test|test> available to all the sub-package tests are as follows.
+Options to test available to all the sub-package tests are as follows.
 
 =over 8
 
 =item data => 'I<string>'
 
-Optionally specify the name of the data to be tested. By default, this is not required: the testdata are those that were last loaded, either anonymously, or as given to one of the dichotomising methods. Otherwise, I<if the data are already ready for testing in a dichotomous format>, data that were previously loaded by name can be individually tested. For example, here are two sets of data that are loaded by name, and then a single test of one of them is performed.
+Optionally specify the name of the data to be tested. By default, this is not required: the data tested are those that were last loaded, either anonymously, or as returned by one of the L<Statistics::Data::Dichotomize|Statistics::Data::Dichotomize> methods. Otherwise, I<if the data are already ready for testing in a dichotomous format>, data that were previously loaded by name can be individually tested. For example, here are two sets of data that are loaded by name, and then a single test of one of them is performed.
 
  @chimps = (qw/banana banana cheese banana cheese banana banana banana/);
  @mice = (qw/banana cheese cheese cheese cheese cheese cheese cheese/);
  $seq->load(chimps => \@chimps, mice => \@mice);
- $seq->test(what => 'runs', data => 'chimps')->dump();
+ $p = $seq->test(stat => 'runs', data => 'chimps');
 
 =item ccorr => I<boolean>
 
@@ -616,15 +173,15 @@ Specify whether or not to perform the continuity-correction on the observed devi
 
 =item tails => I<1>|I<2>
 
-Specify whether the I<z>-value is calculated for both sides of the normal (or chi-square) distribution (2, the default for most testdata) or only one side (the default for data prepared with the B<swing> method.
+Specify whether the I<z>-value is calculated for both sides of the normal (or chi-square) distribution (2, the default for most tested data) or only one side (the default for data prepared with the B<swing> method.
 
 =back
 
-=head4 Test-specific required settings and options
+=head3 Test-specific required settings and options
 
 Some sub-package tests need to have parameters defined in the call to L<test|test>, and/or have specific options, as follows.
 
-B<Joins> : The Joins-test I<optionally> allows the setting of a probability value; see L<test|test> in the  L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/test> manpage.
+B<Joins> : The Joins-test I<optionally> allows the setting of a probability value; see C<test|test> in the  L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/test> manpage.
 
 B<Pot> : The Pot-test I<requires> the setting of a state to be tested; see C<test> in the  L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/test> manpage.
 
@@ -634,56 +191,48 @@ B<Runs>, B<Turns> : There are presently no specific requirements nor options for
 
 =cut
 
-#-----------------------------------------------
-sub test {
-#-----------------------------------------------
-    my ($self, $testname, $args) = (shift);
+sub p_value { return _feedme('p_value', @_); } *test = \&p_value;
 
-    if (! ref $_[0] and scalar(@_) % 2) { # uneven: assume first value is the testname:
-        $testname = shift;
-        $args = {@_};
-        cluck __PACKAGE__, "::test Giving an unkeyed test-name as the first argument is deprecated; the name should be hash-keyed as what => '$testname'";
-    }
-    else {
-        $args = ref $_[0] ? $_[0] : {@_};
-        $testname = $args->{'what'};
-    }
+=head2 stats_hash
 
-    my $class = __PACKAGE__ . '::' . ucfirst($testname);
-    eval "require $class";
-    if (!$@) {
-        $self->{'test'} = $testname;
-        bless($self, $class);
-        $self->test($args);
-        bless($self, __PACKAGE__);
+ $href = $seq->stats_hash(stat => 'runs', values => {observed => 1, expected => 1, variance => 1, z_value => 1, p_value => 1});
+
+Returns a hashref with values for any of the descriptives and probability value relevant to the specified B<stat>istic. Include other required or optional arguments relevant to any of the values requested, e.g., B<ccorr> if getting a z_value, B<tails> and B<exact> if getting a p_value, B<state> if testing pot, B<prob> if testing joins, ... B<precision_s>, B<precision_p> ... 
+
+=cut
+
+sub stats_hash {
+    my $self = shift;
+    my $args = ref $_[0] ? $_[0] : {@_};
+    my %stats_hash = ();
+    no strict 'refs';
+    foreach my $meth(qw/observed expected variance obsdev stdev z_value p_value/) {
+        if ($args->{'values'}->{$meth}) {
+            $stats_hash{$meth} = $self->$meth($args);
+        }
     }
-    else {
-        croak __PACKAGE__, "::test Requested test $class is not valid (should be joins, pot, runs or vnomes), or the package is not locatable"
+    if (! scalar keys %stats_hash) { # get default stats:
+        foreach my $meth(qw/observed p_value/) {
+            $stats_hash{$meth} = $self->$meth($args);
+        }
     }
-    return $self;
+    
+    return \%stats_hash;
 }
 
-=head2 Accessing results
+=head2 dump
 
-All relevant statistical values are "lumped" into the class-object, and can be retrieved thus:
+ $seq->dump(stat => 'runs|joins|pot ...', values => {}, format => 'string|table', flag => '1|0', precision_s => 'integer', precision_p => 'integer');
 
- $seq->{'observed'} # The observed value of the test-statistic (Runs, Joins, Pot)
- $seq->{'expected'} # The expected value of the test-statistic (Runs, Joins, Pot)
- $seq->{'obs_dev'} # The observed deviation (observed minus expected values), continuity-corrected, if so specified
- $seq->{'std_dev'} # The standard deviation
- $seq->{'variance'} # Variance
- $seq->{'z_value'} # The value of the Z-statistic (ratio of observed to standard deviation), where relevant
- $seq->{'p_value'} # The "normal probability" associated with the Z-statistic, or other statistic
-
-=head3 dump
-
- $seq->dump(flag => '1|0', text => '0|1|2', precision_s => 'integer', precision_p => 'integer');
-
-I<Alias:> C<print_summary>
+I<Alias>: B<print_summary>
 
 Print results of the last-conducted test to STDOUT. By default, if no parameters to C<dump> are passed, a single line of test statistics are printed. Options are as follows.
 
 =over 8
+
+=item values => hashref
+
+Hashref of the statistical parameters to dump. Default is observed value and p-value for the given B<stat>.
 
 =item flag => I<boolean>
 
@@ -691,22 +240,23 @@ If true, the I<p>-value associated with the I<z>-value is appended with a single
 
 If false (default), nothing is appended to the I<p>-value.
 
-=item text => I<0>|I<1>|I<2>
+=item format => 'table|labline|csv'
 
-If set to 1, a single line is printed, beginning with the name of the test, then the observed and expected values of the test-statistic, and the I<z>-value and its associated I<p>-value. The Pot-test, additionally, shows the state tested in parentheses after the test-name, and the test for I<v>-nomes shows the tested degrees-of-freedom in parentheses after the test-name. For example:
+Default is 'csv', to print the stats hash as a comma-separated string (no newline), e.g., '4.0000,0.8596800". If specifying 'labline', you get something like "observed = 4.0000, p_value = 0.8596800\n". If specifying "table", this is a dump from L<Text::SimpleTable|Text::SimpleTable> with the stat methods as headers and column length set to the maximum required for the given headers, level of precision, flag, etc. For example, with B<precision_s> => 4 and B<precision_p> => 7, you get:
 
- Joins: observed = 9.000, expected = 7.680, Z = 0.292261298612503, 2p = 0.77008
- Runs: observed = 24.000, expected = 26.000, Z = -0.428660704987056, 2p = 0.66816
- Pot(reds): observed = 19.473, expected = 17.916, Z = 0.783870400176386, 2p = 0.43312
- delta^2psi^2 (81) = 74.0232558139535, 2p = 0.695649837679089
+ .-----------+-----------.
+ | observed  | p_value   |
+ +-----------+-----------+
+ | 4.0000    | 0.8596800 |
+ '-----------+-----------'
 
-If set to anything greater than 1, more verbose info is printed: all the above info, on separate lines, with some additional info about sample-size, etc.
+=item verbose => 1|0
 
-If set to zero, only the string returned by C<string> is printed.
+If true, includes a title giving the name of the statistic, details about the hypothesis tested (if B<p_value> => 1 in the B<values> hashref), et al. No effect if B<format> is not defined or equals 'csv'.
 
 =item precision_s => 'I<non-negative integer>'
 
-Precision of the I<Z>-statistic.
+Precision of the statistic values (observed, expected, variance, z_value).
 
 =item precision_p => 'I<non-negative integer>'
 
@@ -716,255 +266,112 @@ Specify rounding of the probability associated with the I<z>-value to so many di
 
 =cut
 
-#-----------------------------------------------
 sub dump {
-#-----------------------------------------------
-    my ($self) = (shift);
-    my $class = __PACKAGE__ . '::' . ucfirst($self->{'test'});
-
-    if (!$@) {
-        bless($self, $class);
-        $self->dump(@_);
-        bless($self, __PACKAGE__);
+    my $self = shift;
+    my $args = ref $_[0] ? $_[0] : {@_};
+    my $stats_hash = $self->stats_hash($args);
+    $args->{'format'} ||= 'csv';
+    my ($maxlen, $str, $val) = (0, '');
+    my @strs = ();
+        my @headers = ();
+    foreach my $meth(qw/observed expected variance obsdev stdev z_value p_value/) {
+        next if ! defined $stats_hash->{$meth};
+        $val = $stats_hash->{$meth};
+        if ($meth eq 'p_value') {
+            $val = _precisioned($args->{'precision_p'}, $val);
+            $val .= ($val < .05 ? ($val < .01 ? '**' : '*') : '') if $args->{'flag'};
+        }
+        else {
+            $val = _precisioned($args->{'precision_s'}, $val);
+        }
+        push @headers, $meth;
+        push(@strs, $val);
+        my $len = length $val;
+        $maxlen = $len if $len > $maxlen;
+    }
+    if ($args->{'format'} eq 'table') {
+        $maxlen = 8 if $maxlen < 8;
+        my $title = $args->{'verbose'} ? ucfirst($args->{'stat'}) . " statistics\n" : '';
+        print $title;
+        my @hh = ();
+        push( @hh, [$maxlen, $_]) foreach @headers;
+        require Text::SimpleTable;
+        my $tbl = Text::SimpleTable->new(@hh);
+        $tbl->row(@strs);
+        print $tbl->draw;
+    }
+    elsif ($args->{'format'} eq 'labline') {
+        my @hh;
+        for (my $i = 0; $i <= $#strs; $i++) {
+            $hh[$i] = "$headers[$i] = $strs[$i]"; 
+        }
+        $str = join(', ', @hh);
+        if ($args->{'verbose'}) {
+            $str = ucfirst($args->{'stat'}) . ': ' . $str;
+        }
+        $str .= "\n";
+        print STDOUT $str;
     }
     else {
-        croak __PACKAGE__, '::test Name for valid test (joins, runs, pot) required'
+        print join(',', @strs);
     }
+    return;
 }
+*print_summary = \&dump;
 
-=head3 dump_data
+=head2 dump_data
 
- $seq->dump_data(delim => "\n")
+ $seq->dump_data(delim => "\n");
 
-Prints to STDOUT a space-separated line of the testdata - as dichotomised and put to test. Optionally, give a value for C<delim> to specify how the datapoints should be separated.
+Prints to STDOUT a space-separated line of the tested data - as dichotomized and put to test. Optionally, give a value for B<delim> to specify how the datapoints should be separated. Inherited from L<Statistics::Data/dump_data>.
 
 =cut
-
-#-----------------------------------------------
-sub dump_data {
-#-----------------------------------------------
-    my ($self, %args) = @_; 
-    my $delim = $args{'delim'} || " ";
-    print join($delim, @{$self->{'testdata'}}), "\n";
-}
-
-=head3 string
-
- $seq->string(break => '1|0'); # line break appended by default
-
-Returns a single line giving the I<z>-value and I<p>-value. Accepts the C<precision_s>, C<precision_p> and C<flag> options, as for L<dump|dump>. A line-break is, by default, appended, unless you specify C<break> => 0;
-
-=cut
-
-#-----------------------------------------------
-sub string {
-#-----------------------------------------------
-    my ($self) = (shift);
-    my $args = ref $_[0] ? $_[0] : [@_];
-    return if !defined $self->{'p_value'};
-    my $str = 'Z = ';
-    $str .= _precisioned($args->{'precision_s'}, $self->{'z_value'});
-    $str .=  ', ' . ($args->{'tails'}||$self->{'_tails'}||2) . 'p = ';
-    $str .= _precisioned($args->{'precision_p'}, $self->{'p_value'});
-    $str .= ($self->{'p_value'} < .05 ? ($self->{'p_value'} < .01 ? '**' : '*') : '') if $args->{'flag'};
-    $str .= "\n" unless defined $args->{'break'} and $args->{'break'} == 0;
-    return $str;
-}
 
 # PRIVATMETHODEN
 
-sub _dump_sparse {
+sub _feedme {
+    my $meth = shift;
     my $self = shift;
-    my $args = ref $_[0] ? $_[0] : [@_];
-    if ($args->{'text'}) { # equals 1: print a single line giving observed and expected values + test-statistic & its p-value (only):
-        print $args->{'testname'} . ': ' if defined $args->{'testname'} and length $args->{'testname'};
-        printf("observed = %.3f", $self->{'observed'});
-        printf $self->{'observed_stdev'} ? (" (%.3f), ", $self->{'observed_stdev'}) : ', ';
-        printf("expected = %.3f, ", $self->{'expected'});
-        print ' ', $self->string($args);
-    }
-    else {
-        print $self->string($args);
-    }
-}
-
-sub _dump_verbose {
-    my ($self, $args) = @_;
-    _print_title($args->{'title'});
-    printf(" Observed %s = %.3f" , $args->{'testname'}, $self->{'observed'});
-    printf $self->{'observed_stdev'} ? (" (%.3f)\n", $self->{'observed_stdev'}) : "\n";
-    printf(" Expected %s = %.3f\n" , $args->{'testname'}, $self->{'expected'});
-    print ' ', $self->string($args);
-}
-
-sub _print_title { # A heading offered when a call to dump has title => 2, i.e., verbose
-    my ($title) = (shift);
-    print '-' x 57 . "\n";
-    print "$title\n";
-    print '-' x 57 . "\n";
-}
-
-sub _rawdata_aref { 
-    my ($self, $data_name) = @_;
-    my $dat;
-
-    if ($data_name) {# Has a data array been named by the user?
-       if (ref $data_name) {# Yes, but there might be more than one (e.g, for matching or pooling):
-           my $i = 0;
-           foreach (@{$data_name}) {
-              if (ref $self->{'data'} eq 'HASH' and defined $self->{'data'}->{$_}) {
-                 $dat->[$i++] = $self->{'data'}->{$_};
-              }
-              else {
-                 croak __PACKAGE__, '  Data named \'', $_, '\' are not loaded';
-              }
-           }
-       }
-       elsif (length $data_name) {# One name only, prob. called for cutting:
-           if (defined $self->{'data'}->{$data_name}) {
-                $dat = $self->{'data'}->{$data_name};
-           }
-           else {
-                croak __PACKAGE__, '  Data named \'', $data_name, '\' are not loaded';
-           }
-       }
-    }
-    elsif (ref $self->{'data'} eq 'ARRAY' and scalar(@{$self->{'data'}}) ) {# No named array; get any data stored as "data":
-           $dat = $self->{'data'};
-    }
-    else {
-    # if !$args->{'data'} or ref $args->{'data'} ne 'ARRAY' or ! scalar @{$args->{'data'}};
-       croak __PACKAGE__, ' No data are accessible for testing - Do they need to be loaded?';
-    }
-
-    return $dat;
-}
-
-sub _testdata_aref {
-    my ($self, $args) = @_;
-
-    if ($args->{'data'} and ref($self->{'data'}->{$args->{'data'}}) && scalar @{$self->{'data'}->{$args->{'data'}}}) {
-        $self->{'testdata'} = $self->{'data'}->{$args->{'data'}};
-    }
-    elsif(!ref $self->{'testdata'} or ref $self->{'testdata'} ne 'ARRAY') {
-        if (ref($self->{'data'}) eq 'ARRAY') {
-            $self->{'testdata'} = $self->{'data'};
-        }
-        else {
-            croak __PACKAGE__, '::test Data for testing have not been specified or loaded';
-        }
-    }
-}
-
-sub _expound { # Get the expectation, variance & observed N-sequences from each test; test, and lump results into class object
-    my ($self, $obs_val, $exp_val, $var, $args) = @_;
-    $args->{'tails'} ||= 2;
-    $args->{'ccorr'} = 1 if ! defined $args->{'ccorr'};
-
-     my ($z, $pz, $obs_dev, $std_dev) = $self->{'zed'}->zscore(
-        observed => $obs_val,
-        expected => $exp_val,
-        variance => $var,
-        ccorr => $args->{'ccorr'},
-        tails => $args->{'tails'},
-        precision_s => $args->{'precision_s'}, 
-        precision_p => $args->{'precision_p'},
-     );
-
-    # Lump values into class object:
-    $self->{'observed'} = $obs_val;
-    $self->{'expected'} = $exp_val;
-    $self->{'z_value'} = $z;
-    $self->{'p_value'} = $pz;
-    $self->{'obs_dev'} = $obs_dev;
-    $self->{'std_dev'} = $std_dev;
-    $self->{'variance'} = $var;
-    
-    # The following can only be hang-overs from any test of Vnomes:
-    $self->{'observed_stdev'} = undef;
-    $self->{'df'} = undef;
-
-    $self->{'_tested'} = 1;
-    $self->{'_tails'} = $args->{'tails'};
-    $self->{'_ccorr'} = $args->{'ccorr'};
-}
-
-sub _expire {# Do the least amount possible, if variance = 0 or some other nuisance problem in the tests:
-    my ($self, $obs_val, $exp_val, $args);
-    $self->{$_} = 0 foreach qw/observed z_value obs_dev std_dev variance/;
-    $args->{'precision_p'} ||= 0;
-    $self->{'p_value'} = sprintf('%.' . $args->{'precision_p'} . 'f', 1);
-    $self->{'observed'} = $obs_val;
-    $self->{'expected'} = $exp_val;
+    my $args = ref $_[0] ? $_[0] : {@_};
+    my $statname = $args->{'stat'} || '';
+    my $class = __PACKAGE__ . '::' . ucfirst($statname);
+    eval "require $class";
+    croak __PACKAGE__, " error: Requested sequences module '$class' is not valid/available. You might need to install '$class'" if $@;
+    my ($val, $nself) = ('', {});
+    #my $nself = {};
+    bless($nself, $class);#$nself = $class->new();
+    $nself->{$_} = $self->{$_} foreach keys %$self;
+    no strict 'refs';
+    $val = $nself->$meth($args);
+    $self->{'stat'} = $statname;
+    return $val;
 }
 
 sub _precisioned {
     return $_[0] ? sprintf('%.' . $_[0] . 'f', $_[1]) : (defined $_[1] ? $_[1] : ''); # don't lose any zero
 }
 
-# Aliases:
-*load_data = \&load;
-*add_data = \&add;
-*append = \&add;
-*append_data = \&add;
-*get_data = \&read;
-*clear_data = \*unload;
-*delete_data = \*unload;
-*process = \&test;
-*print_summary = \&dump;
-
 1;
+
 __END__
-
-=head1 REFERENCES
-
-Burdick, D. S., & Kelly, E. F. (1977). Statistical methods in parapsychological research. In B. B. Wolman (Ed.), I<Handbook of Parapsychology> (pp. 81-130). New York, NY, US: Van Nostrand Reinhold. [Description of joins-test, with comparison to runs-test.]
-
-Good, I. J., & Gover, T. N. (1967). The generalized serial test and the binary expansion of [square-root]2. I<Journal of the Royal Statistical Society A>, I<130>, 102-107. [Describes the test of Vnomes.]
-
-Kelly, E. F. (1982). On grouping of hits in some exceptional psi performers. I<Journal of the American Society for Psychical Research>, I<I76>, 101-142. [Application of runs-test, with discussion of normality issue.]
-
-Kendall, M. G. (1973). I<Time-series>. London, UK: Griffin. [Describes the test of Turns.]
-
-Schmidt, H. (2000). A proposed measure for psi-induced bunching of randomly spaced events. I<Journal of Parapsychology, 64,> 301-316. [Describes the pot-test.]
-
-Swed, F., & Eisenhart, C. (1943). Tables for testing randomness of grouping in a sequence of alternatives. I<Annals of Mathematical Statistics>, I<14>, 66-87. [Look in C<ex/checks.pl> in the CPAN installation dist for several examples from this paper for testing.]
-
-Wald, A., & Wolfowitz, J. (1940). On a test whether two samples are from the same population. I<Annals of Mathematical Statistics>, I<11>, 147-162. [Describes the runs-test.]
-
-Wishart, J. & Hirshfeld, H. O. (1936). A theorem concerning the distribution of joins between line segments. I<Journal of the London Mathematical Society>, I<11>, 227. [Describes the joins-test.]
-
-Wolfowitz, J. (1943). On the theory of runs with some applications to quality control. I<Annals of Mathematical Statistics>, I<14>, 280-288. [Suggests some ways in which data may be dichotomised for testing runs; implemented here.]
-
-=head1 SEE ALSO
-
-L<Statistics::Burst|Statistics::Burst> : A test of sequences sensitive to temporal intervals of each state's occurrence.
-
-=head1 TO DO/BUGS
-
-Results are dubious if there are only two observations.
-
-Testing not by I<z>-scores, and/or using poisson distribution for low number of observations
-
-Fu's Markovian solution
-
-Multivariate extensions
-
-Sort option for pool method ?
 
 =head1 REVISIONS
 
 The series testing methods (series_init, series_update and series_test) have been moved to Statistics::Zed as of v0.03.
 
-Simply giving the first argument to C<test> as the name of the test, unkeyed, is deprecated, and will be removed in the next version.
+Simply giving the first argument to C<test> as the name of the test, unkeyed, is deprecated.
 
 See CHANGES file in installation dist.
+
+=head1 BUNDLING?
+
+This module C<use>s its sub-modules implicitly - so a bundled program using this module might need to explicitly C<use> its sub-modules if these need to be included in the bundle itself.
 
 =head1 AUTHOR/LICENSE
 
 =over 4
 
-=item Copyright (c) 2006-2010 Roderick Garton
+=item Copyright (c) 2006-2013 Roderick Garton
 
 rgarton AT cpan DOT org
 
@@ -975,9 +382,5 @@ This program is free software. It may be used, redistributed and/or modified und
 To the maximum extent permitted by applicable law, the author of this module disclaims all warranties, either express or implied, including but not limited to implied warranties of merchantability and fitness for a particular purpose, with regard to the software and the accompanying documentation.
 
 =back
-
-=head1 END
-
-This ends documentation of Perl implementations of tests of sequences for randomness and/or group differences formed as Runs, Joins, Pot (potential energy) and Vnomes (serial test), based on work by Good, Kendall, Schmidt, Swedt, Wald and Wishart.
 
 =cut
