@@ -1,8 +1,8 @@
-<SOFTPKG NAME="Statistics-Sequences" VERSION="0,10,0,0">
+<SOFTPKG NAME="Statistics-Sequences" VERSION="0,11,0,0">
     <TITLE>Statistics-Sequences</TITLE>
     <ABSTRACT>Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.</ABSTRACT>
     <AUTHOR>Roderick Garton &lt;rgarton@cpan.org&gt;</AUTHOR>
     <IMPLEMENTATION>
-        <CODEBASE HREF="PPM-Statistics-Sequences-0.10.tar.gz" />
+        <CODEBASE HREF="PPM-Statistics-Sequences-0.11.tar.gz" />
     </IMPLEMENTATION>
 </SOFTPKG>

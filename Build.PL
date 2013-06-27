@@ -13,8 +13,13 @@ my $builder = Module::Build->new(
     build_requires => {
         'Test::More' => 0,
         'Statistics::Data' => '0.02',
+        'Scalar::Util' => '1.18',
     },
-    add_to_cleanup      => [ 'Statistics-Sequences-0.10-*' ],
+    requires => {
+        'Statistics::Data' => '0.02',
+        'Scalar::Util' => '1.18',
+    },
+    add_to_cleanup      => [ 'Statistics-Sequences-0.11-*' ],
 );
 
 $builder->create_build_script();

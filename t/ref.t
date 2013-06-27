@@ -18,17 +18,6 @@ my @dat = (qw/H H H H H H H H H H D H D D D D H H H H H H H H H/);
 eval { $seq->load(\@dat);};
 ok(!$@);
 
-# check if accessible by the Runs package, if installed:
-#my $val;
-#eval {require Statistics::Sequences::Runs;};
-#if (!$@) {
-#    $val = $seq->p_value('stat' => 'runs', tails => 1);
-#    ok(equal($val, $refdat{'test1'}->{'p_value'}), "$val = $refdat{'test1'}->{'p_value'}");
-#}
-#else {
-#    ok(1);
-#}
-
 eval {$seq->unload();};
 ok(!$@);
 

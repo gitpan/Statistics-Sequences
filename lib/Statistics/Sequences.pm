@@ -3,6 +3,7 @@ use 5.008008;
 use strict;
 use warnings;
 use Statistics::Data;
+use Scalar::Util qw(looks_like_number);
 use vars qw(@ISA @EXPORT);
 use Exporter;
 @ISA = qw(Statistics::Data Exporter);
@@ -10,7 +11,7 @@ use Exporter;
 #extends 'Statistics::Data';
 use Carp qw(croak cluck);
 use vars qw($VERSION);
-$VERSION = '0.10';
+$VERSION = '0.11';
 
 =pod
 
@@ -20,7 +21,7 @@ Statistics::Sequences - Tests of sequences for runs, joins, bunches, turns, doub
 
 =head1 SYNOPSIS
 
-  use Statistics::Sequences 0.10;
+  use Statistics::Sequences 0.11;
   $seq = Statistics::Sequences->new();
   
   my @data = (); # make it up:
@@ -31,6 +32,7 @@ Statistics::Sequences - Tests of sequences for runs, joins, bunches, turns, doub
   print $seq->observed(stat => 'pot', state => 1); # expected, variance, z_value, p_value
   print $seq->test(stat => 'vnomes', length => 2); # length of "v" (for mononomes/singlets, dinomes/doublets, etc.)
   $seq->dump(stat => 'runs', values => {observed => 1, z_value => 1, p_value => 1}, exact => 1, tails => 1);
+  # see also Statistics::Data for inherited method for handling the loaded data
 
 =head1 DESCRIPTION
 
@@ -61,9 +63,9 @@ Sub-packages also have their own new method - so, e.g., L<Statistics::Sequences:
 
 In this case, data are not automatically shared across packages, and only one test (in this case, the Runs-test) can be accessed through the class-object returned by L<new|new>.
 
-=head2 load, add, unload, dump, string
+=head2 load, add, unload
 
-All these operations on the basic data are inherited from L<Statistics::Data|Statistics::Data> - see L<Statistics::Data> for details.
+All these operations on the basic data are inherited from L<Statistics::Data|Statistics::Data> - see L<Statistics::Data> for details of these and other possible methods.
 
 B<Dichotomous data>: Both the runs- and joins-tests expect dichotomous data: a binary or binomial or Bernoulli sequence, but with whatever characters to symbolize the two possible events. They test their "loads" to make sure the data are dichotomous. To reduce numerical and categorical data to a dichotomous level, see the L<pool|Statistics::Data::Dichotomize/pool>, L<match|Statistics::Data::Dichotomize/match>, L<split|Statistics::Data::Dichotomize/split, cut>, L<swing|Statistics::Data::Dichotomize/swing>, L<shrink (boolwin)|Statistics::Data::Dichotomize/shrink, boolwin> and other methods in L<Statistics::Data::Dichotomize>.
 
@@ -204,19 +206,21 @@ Returns a hashref with values for any of the descriptives and probability value 
 sub stats_hash {
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
-    my %stats_hash = ();
+    my @methods = keys %{$args->{'values'}};
+    my ($method, %stats_hash) = ();
     no strict 'refs';
-    foreach my $meth(qw/observed expected variance obsdev stdev z_value p_value/) {
-        if ($args->{'values'}->{$meth}) {
-            $stats_hash{$meth} = $self->$meth($args);
+    foreach $method(@methods) {
+        if ($args->{'values'}->{$method} == 1) {
+            eval {$stats_hash{$method} = $self->$method($args);};
+            croak "Method $method is not defined or correctly called for " . __PACKAGE__ if $@;
         }
     }
     if (! scalar keys %stats_hash) { # get default stats:
-        foreach my $meth(qw/observed p_value/) {
-            $stats_hash{$meth} = $self->$meth($args);
+        foreach $method(qw/observed p_value/) {
+            eval {$stats_hash{$method} = $self->$method($args);};
+            croak "Method $method is not defined or correctly called for " . __PACKAGE__ if $@;
         }
     }
-    
     return \%stats_hash;
 }
 
@@ -271,22 +275,51 @@ sub dump {
     my $args = ref $_[0] ? $_[0] : {@_};
     my $stats_hash = $self->stats_hash($args);
     $args->{'format'} ||= 'csv';
-    my ($maxlen, $str, $val) = (0, '');
-    my @strs = ();
-        my @headers = ();
-    foreach my $meth(qw/observed expected variance obsdev stdev z_value p_value/) {
-        next if ! defined $stats_hash->{$meth};
-        $val = $stats_hash->{$meth};
-        if ($meth eq 'p_value') {
+    my @standard_methods = (qw/observed expected variance obsdev stdev z_value p_value/);
+    my ($maxlen, $str, $method, $val, @strs, @headers, @wanted_methods) = (0, '');
+    foreach $method(@standard_methods) { # set up what has been requested in a meaningful order:
+        push(@wanted_methods, $method) if defined $stats_hash->{$method};
+    }
+    foreach $method(keys %{$stats_hash}) {
+        push(@wanted_methods, $method) if ! grep/$method/, @wanted_methods;
+    }
+    foreach $method(@wanted_methods) {
+        $val = delete $stats_hash->{$method};
+        my $len;
+        if ($method eq 'p_value') {
             $val = _precisioned($args->{'precision_p'}, $val);
             $val .= ($val < .05 ? ($val < .01 ? '**' : '*') : '') if $args->{'flag'};
         }
         else {
-            $val = _precisioned($args->{'precision_s'}, $val);
+            if (ref $val) {
+                if (ref $val eq 'HASH') {
+                    my %vals = %$val;
+                    $val = '';
+                    my $delim = $args->{'format'} eq 'table' ? "\n" : ',';
+                    my ($str, $this_len) = ();
+                    while (my($k, $v) = each %vals) {
+                        $str = "'$k' = $v";
+                        $this_len = length($str);
+                        $len = $this_len if ! defined $len or $this_len > $len;
+                        $val .= $str;
+                        $val .= $delim;
+                    }
+                    if ($args->{'format'} ne 'table') {
+                        chop $val;
+                        $val = '(' . $val . ')';
+                    }
+                }
+                else {
+                    $val = join(', ', @$val); 
+                }
+            }
+            elsif(looks_like_number($val)) {
+                $val = _precisioned($args->{'precision_s'}, $val);
+            }
         }
-        push @headers, $meth;
+        push @headers, $method;
         push(@strs, $val);
-        my $len = length $val;
+        $len = length $val if ! defined $len;
         $maxlen = $len if $len > $maxlen;
     }
     if ($args->{'format'} eq 'table') {
@@ -309,10 +342,9 @@ sub dump {
         if ($args->{'verbose'}) {
             $str = ucfirst($args->{'stat'}) . ': ' . $str;
         }
-        $str .= "\n";
-        print STDOUT $str;
+        print STDOUT $str, "\n";
     }
-    else {
+    else { # csv
         print join(',', @strs);
     }
     return;
@@ -330,7 +362,7 @@ Prints to STDOUT a space-separated line of the tested data - as dichotomized and
 # PRIVATMETHODEN
 
 sub _feedme {
-    my $meth = shift;
+    my $method = shift;
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
     my $statname = $args->{'stat'} || '';
@@ -342,7 +374,8 @@ sub _feedme {
     bless($nself, $class);#$nself = $class->new();
     $nself->{$_} = $self->{$_} foreach keys %$self;
     no strict 'refs';
-    $val = $nself->$meth($args);
+    eval '$val = $nself->$method($args)'; # but does not trap "deep recursion" if method not defined
+    croak __PACKAGE__, " error: Method '$method' is not defined for $class" if $@;
     $self->{'stat'} = $statname;
     return $val;
 }

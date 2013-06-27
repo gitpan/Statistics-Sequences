@@ -3,6 +3,7 @@ abstract: 'Tests of sequences for runs, joins, bunches, turns, doublets, trinome
 author:
   - 'Roderick Garton <rgarton@cpan.org>'
 build_requires:
+  Scalar::Util: 1.18
   Statistics::Data: 0.02
   Test::More: 0
 configure_requires:
@@ -16,7 +17,10 @@ name: Statistics-Sequences
 provides:
   Statistics::Sequences:
     file: lib/Statistics/Sequences.pm
-    version: 0.10
+    version: 0.11
+requires:
+  Scalar::Util: 1.18
+  Statistics::Data: 0.02
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.10
+version: 0.11

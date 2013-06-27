@@ -1,11 +1,18 @@
 Revision history for Perl extension Statistics::Sequences.
 
+0.11 2013 June
+ + rewrite of dump() method to cope with stats that have list output (as for Statistics::Sequences::Vnomes/observed).
+ + eval{} of methods called for stats_hash() or dump().
+
 0.10 2013 May
  + All methods for data-handling (load, read, add, unload) expanded and inherited from Statistics::Data
  + Overhauled interface to the statistics and tests - using methods to get descriptives, etc. - see the PODs
  + Have to name the "stat" you want for any of these methods, as well as for the "test"
  + Sub-modules parcelled out to exist in the world by themselves
  + Statistics::Zed object is no longer cached.
+ + NOT compatible with prior versions. All sub-modules (tests of Runs, Turns, Pot, etc.) rewritten to be compatible.
+ 
+--------------------
 
 0.052 2010 Sept 30
  + Check that all options sent to <test> are valid ones
