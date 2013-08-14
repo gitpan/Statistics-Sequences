@@ -1,54 +1,42 @@
 package Statistics::Sequences;
-use 5.008008;
 use strict;
-use warnings;
-use Statistics::Data;
-use Scalar::Util qw(looks_like_number);
-use vars qw(@ISA @EXPORT);
-use Exporter;
-@ISA = qw(Statistics::Data Exporter);
-#use Moose;
-#extends 'Statistics::Data';
+use warnings FATAL => 'all';
 use Carp qw(croak cluck);
-use vars qw($VERSION);
-$VERSION = '0.11';
+use Statistics::Data 0.08;
+use base qw(Statistics::Data);
+use Scalar::Util qw(looks_like_number);
+our $VERSION = '0.12';
 
 =pod
 
 =head1 NAME
 
-Statistics::Sequences - Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.
+Statistics::Sequences - Manage sequences (ordered list of literals) for testing their runs, joins, turns, trinomes, potential energy, etc.
+
+=head1 VERSION
+
+This is documentation for Version 0.12 of Statistics::Sequences.
 
 =head1 SYNOPSIS
 
-  use Statistics::Sequences 0.11;
-  $seq = Statistics::Sequences->new();
-  
-  my @data = (); # make it up:
-  push @data, int(rand(2)) foreach 0 .. 300;
-
-  $seq->load(\@data); # or @data or dataname => \@data
-  print $seq->observed(stat => 'runs'); # expected, variance, z_value, p_value
-  print $seq->observed(stat => 'pot', state => 1); # expected, variance, z_value, p_value
-  print $seq->test(stat => 'vnomes', length => 2); # length of "v" (for mononomes/singlets, dinomes/doublets, etc.)
-  $seq->dump(stat => 'runs', values => {observed => 1, z_value => 1, p_value => 1}, exact => 1, tails => 1);
-  # see also Statistics::Data for inherited method for handling the loaded data
+ use Statistics::Sequences 0.12;
+ $seq = Statistics::Sequences->new();
+ my @data = (1, 'a', 'a', 1); # ordered list of literal scalars (numbers, strings), as permitted by specific test
+ $seq->load(\@data); # or @data or dataname => \@data
+ print $seq->observed(stat => 'runs'); # expected, variance, z_value, p_value - assuming sub-module Runs.pm is installed
+ print $seq->test(stat => 'vnomes', length => 2); # - - assuming sub-module Vnomes.pm is installed
+ $seq->dump(stat => 'runs', values => {observed => 1, z_value => 1, p_value => 1}, exact => 1, tails => 1);
+ # see also Statistics::Data for inherited methods
 
 =head1 DESCRIPTION
 
-Loading and preparing data for statistical tests of their sequential structure via L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot>, L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Examples of the use of each test are given in these pages.
+Loading, updating and accessing data as ordered list of literal scalars (numbers, strings) for statistical tests of their sequential structure via L<Statistics::Sequences::Joins|Statistics::Sequences::Joins>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot>, L<Statistics::Sequences::Runs|Statistics::Sequences::Runs>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes>. Note that none of these sub-modules are installed by default; to use this module as intended, install one or more of these sub-modules.
 
-In general, to access the tests, you L<use|perlfunc/use> this base module to directly create a Statistics::Sequences object with the L<new|new> method. You then L<load|load> data into it, and then access each test by calling the L<test|test> method and specifying the B<stat> attribute: either joins, pot, runs, turns or vnomes. This way, you can run several tests on the same data, as the data are immediately available to each test (of joins, pot, runs, turns or vnomes). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example. 
+To access the tests, L<use|perlfunc/use> this base module to create a Statistics::Sequences object with L<new|new>, then L<load|load> data into it and access each test by calling the L<test|test> method, specifying the B<stat> attribute: either joins, pot, runs, turns or vnomes, where the relevant sub-module is installed. This allows running several tests on the same data, as the data are immediately available to each test (of joins, pot, runs, turns or vnomes). See the L<SYNOPSIS|Statistics::Sequences/SYNOPSIS> for a simple example. 
 
-Otherwise, you can L<use|perlfunc/use> each sub-module directly, and restrict your analyses to the sub-module's test. That is, if you only want to perform a test of one type (e.g., runs), you might simply L<use|perlfunc/use> the relevant sub-package, create a class object specific to it, and load data specfically for its use; see the SYNOPSIS for the particular test, i.e., L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS>, L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Turns|Statistics::Sequences::Turns/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests of the same data by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
+Alternatively, L<use|perlfunc/use> each sub-module directly, and restrict analyses to the sub-module's test; this module is used implicitly as their base. That is, to perform a test of one type (e.g., runs), L<use|perlfunc/use> the relevant sub-package, load data via its constructor; see the SYNOPSIS for the particular test, i.e., L<Joins|Statistics::Sequences::Joins/SYNOPSIS>, L<Pot|Statistics::Sequences::Pot/SYNOPSIS>, L<Runs|Statistics::Sequences::Runs/SYNOPSIS>, L<Turns|Statistics::Sequences::Turns/SYNOPSIS> or L<Vnomes|Statistics::Sequences::Vnomes/SYNOPSIS>. You won't be able to access other tests of the same data by this approach, unless you create another object for that test, and then specifically pass the data from the earlier object into the new one.
 
-There are also methods to anonymously or nominally cache data, and that data might need to be reduced to a dichotomous format, before a valid test can be run. Several dichotomizing methods are provided, once data are loaded, and accessible via the generic or specific class objects, as above.
-
-=head1 METHODS
-
-The package provides an object-oriented interface for performing the tests of sequences in the form of L<Runs|Statistics::Sequences::Runs>, L<Joins|Statistics::Sequences::Joins>, L<Pot(ential energy)|Statistics::Sequences::Pot>, L<Turns|Statistics::Sequences::Turns> or L<Vnomes|Statistics::Sequences::Vnomes>. 
-
-Most methods are named with aliases, should you be used to referring to Perl statistics methods by one or another of the many conventions. Present conventions are mostly based on those used in Juan Yun-Fang's modules, e.g., L<Statistics::ChisqIndep|Statistics::ChisqIndep>.
+=head1 SUBROUTINES/METHODS
 
 =head2 new
 
@@ -63,11 +51,11 @@ Sub-packages also have their own new method - so, e.g., L<Statistics::Sequences:
 
 In this case, data are not automatically shared across packages, and only one test (in this case, the Runs-test) can be accessed through the class-object returned by L<new|new>.
 
-=head2 load, add, unload
+=head2 load, add, access, unload
 
-All these operations on the basic data are inherited from L<Statistics::Data|Statistics::Data> - see L<Statistics::Data> for details of these and other possible methods.
+All these operations on the basic data are inherited from L<Statistics::Data|Statistics::Data> - see this doc for details of these and other possible methods.
 
-B<Dichotomous data>: Both the runs- and joins-tests expect dichotomous data: a binary or binomial or Bernoulli sequence, but with whatever characters to symbolize the two possible events. They test their "loads" to make sure the data are dichotomous. To reduce numerical and categorical data to a dichotomous level, see the L<pool|Statistics::Data::Dichotomize/pool>, L<match|Statistics::Data::Dichotomize/match>, L<split|Statistics::Data::Dichotomize/split, cut>, L<swing|Statistics::Data::Dichotomize/swing>, L<shrink (boolwin)|Statistics::Data::Dichotomize/shrink, boolwin> and other methods in L<Statistics::Data::Dichotomize>.
+B<Dichotomous data>: Both the runs- and joins-tests expect dichotomous data: a binary or binomial or Bernoulli sequence, but with whatever characters to symbolize the two possible events. They test their "loads" to make sure the data are dichotomous. To reduce numerical and categorical data to a dichotomous level, see the L<pool|Statistics::Data::Dichotomize/pool>, L<match|Statistics::Data::Dichotomize/match>, L<split|Statistics::Data::Dichotomize/split, cut>, L<swing|Statistics::Data::Dichotomize/swing>, L<shrink (boolwin)|Statistics::Data::Dichotomize/shrink, boolwin> and other methods in L<Statistics::Data::Dichotomize|Statistics::Data::Dichotomize>.
 
 =head2 observed, observation
 
@@ -127,7 +115,7 @@ Returns square-root of the variance.
 =cut
 
 sub stdev {
-    return sqrt(variance(@_));
+    return sqrt variance(@_);
 }
 *standard_deviation = \&stdev;
 
@@ -154,9 +142,9 @@ Returns the probability of observing so many runs, joins, etc., versus those exp
 
 When using a Statistics::Sequences class-object, this method requires naming which test to perform, i.e., runs, joins, pot or vnomes. This is I<not> required when the class-object already refers to one of the sub-modules, as created by the C<new> method within L<Statistics::Sequences::Runs|Statistics::Sequences::Runs/new>, L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/new>, L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/new>, L<Statistics::Sequences::Turns|Statistics::Sequences::Turns/new> and L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/new>.
 
-=head3 General options
+=head3 Common options
 
-Options to test available to all the sub-package tests are as follows.
+Options common to all the sub-package tests are as follows.
 
 =over 8
 
@@ -171,7 +159,7 @@ Optionally specify the name of the data to be tested. By default, this is not re
 
 =item ccorr => I<boolean>
 
-Specify whether or not to perform the continuity-correction on the observed deviation. Default is false. Relevant only for those tests relying on a I<Z>-test. See L<Statistics::Zed>.
+Specify whether or not to perform the continuity-correction on the observed deviation. Default is false. Relevant only for those tests relying on a I<Z>-test. See L<Statistics::Zed|Statistics::Zed>.
 
 =item tails => I<1>|I<2>
 
@@ -183,11 +171,11 @@ Specify whether the I<z>-value is calculated for both sides of the normal (or ch
 
 Some sub-package tests need to have parameters defined in the call to L<test|test>, and/or have specific options, as follows.
 
-B<Joins> : The Joins-test I<optionally> allows the setting of a probability value; see C<test|test> in the  L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/test> manpage.
+B<Joins> : The Joins test I<optionally> allows the setting of a probability value; see C<test|test> in the  L<Statistics::Sequences::Joins|Statistics::Sequences::Joins/test> manpage.
 
-B<Pot> : The Pot-test I<requires> the setting of a state to be tested; see C<test> in the  L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/test> manpage.
+B<Pot> : The Pot test I<requires> the setting of a state to be tested; see C<test> in the  L<Statistics::Sequences::Pot|Statistics::Sequences::Pot/test> manpage.
 
-B<Vnomes> : The Seriality test for V-nomes I<requires> a length, i.e., the value of I<v>; see C<test> in the L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/test> manpage..
+B<Vnomes> : The Serial test for v-nomes requires a length, i.e., the value of I<v>; see C<test> in the L<Statistics::Sequences::Vnomes|Statistics::Sequences::Vnomes/test> manpage..
 
 B<Runs>, B<Turns> : There are presently no specific requirements nor options for the Runs- and Turns-tests. 
 
@@ -207,16 +195,16 @@ sub stats_hash {
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
     my @methods = keys %{$args->{'values'}};
-    my ($method, %stats_hash) = ();
+    my (%stats_hash) = ();
     no strict 'refs';
-    foreach $method(@methods) {
+    foreach my $method(@methods) {
         if ($args->{'values'}->{$method} == 1) {
             eval {$stats_hash{$method} = $self->$method($args);};
             croak "Method $method is not defined or correctly called for " . __PACKAGE__ if $@;
         }
     }
     if (! scalar keys %stats_hash) { # get default stats:
-        foreach $method(qw/observed p_value/) {
+        foreach my $method(qw/observed p_value/) {
             eval {$stats_hash{$method} = $self->$method($args);};
             croak "Method $method is not defined or correctly called for " . __PACKAGE__ if $@;
         }
@@ -276,31 +264,31 @@ sub dump {
     my $stats_hash = $self->stats_hash($args);
     $args->{'format'} ||= 'csv';
     my @standard_methods = (qw/observed expected variance obsdev stdev z_value p_value/);
-    my ($maxlen, $str, $method, $val, @strs, @headers, @wanted_methods) = (0, '');
-    foreach $method(@standard_methods) { # set up what has been requested in a meaningful order:
+    my ($maxlen, @strs, @headers, @wanted_methods) = (0);
+    foreach my $method(@standard_methods) { # set up what has been requested in a meaningful order:
         push(@wanted_methods, $method) if defined $stats_hash->{$method};
     }
-    foreach $method(keys %{$stats_hash}) {
+    foreach my $method(keys %{$stats_hash}) {
         push(@wanted_methods, $method) if ! grep/$method/, @wanted_methods;
     }
-    foreach $method(@wanted_methods) {
-        $val = delete $stats_hash->{$method};
+    foreach my $method(@wanted_methods) {
+        my $val = delete $stats_hash->{$method};
         my $len;
         if ($method eq 'p_value') {
             $val = _precisioned($args->{'precision_p'}, $val);
-            $val .= ($val < .05 ? ($val < .01 ? '**' : '*') : '') if $args->{'flag'};
+            $val .= ($val < .05 ? ($val < .01 ? q{**} : q{*} ) : q{}) if $args->{'flag'};
         }
         else {
             if (ref $val) {
                 if (ref $val eq 'HASH') {
-                    my %vals = %$val;
-                    $val = '';
-                    my $delim = $args->{'format'} eq 'table' ? "\n" : ',';
-                    my ($str, $this_len) = ();
+                    my %vals = %{$val};
+                    $val = q{};
+                    my $delim = $args->{'format'} eq 'table' ? "\n" : q{,};
+                    my ($str, $this_len) = (q{});
                     while (my($k, $v) = each %vals) {
                         $str = "'$k' = $v";
                         $this_len = length($str);
-                        $len = $this_len if ! defined $len or $this_len > $len;
+                        $len = $this_len if not defined $len or $this_len > $len;
                         $val .= $str;
                         $val .= $delim;
                     }
@@ -310,7 +298,7 @@ sub dump {
                     }
                 }
                 else {
-                    $val = join(', ', @$val); 
+                    $val = join q{, }, @{$val};
                 }
             }
             elsif(looks_like_number($val)) {
@@ -324,28 +312,28 @@ sub dump {
     }
     if ($args->{'format'} eq 'table') {
         $maxlen = 8 if $maxlen < 8;
-        my $title = $args->{'verbose'} ? ucfirst($args->{'stat'}) . " statistics\n" : '';
-        print $title;
+        my $title = $args->{'verbose'} ? ucfirst($args->{'stat'}) . " statistics\n" : q{};
+        print $title or croak 'Cannot print title for data-table';
         my @hh = ();
         push( @hh, [$maxlen, $_]) foreach @headers;
         require Text::SimpleTable;
         my $tbl = Text::SimpleTable->new(@hh);
         $tbl->row(@strs);
-        print $tbl->draw;
+        print $tbl->draw or croak 'Cannot print data-table';
     }
     elsif ($args->{'format'} eq 'labline') {
         my @hh;
         for (my $i = 0; $i <= $#strs; $i++) {
-            $hh[$i] = "$headers[$i] = $strs[$i]"; 
+            $hh[$i] = "$headers[$i] = $strs[$i]";
         }
-        $str = join(', ', @hh);
+        my $str = join(q{, }, @hh);
         if ($args->{'verbose'}) {
             $str = ucfirst($args->{'stat'}) . ': ' . $str;
         }
-        print STDOUT $str, "\n";
+        print {*STDOUT} $str, "\n" or croak 'Cannot print data-string';
     }
     else { # csv
-        print join(',', @strs);
+        print join(q{,}, @strs) or croak 'Cannot print data-string'
     }
     return;
 }
@@ -355,7 +343,7 @@ sub dump {
 
  $seq->dump_data(delim => "\n");
 
-Prints to STDOUT a space-separated line of the tested data - as dichotomized and put to test. Optionally, give a value for B<delim> to specify how the datapoints should be separated. Inherited from L<Statistics::Data/dump_data>.
+Prints to STDOUT a space-separated line of the tested data - as dichotomized and put to test. Optionally, give a value for B<delim> to specify how the datapoints should be separated. Inherited from L<Statistics::Data|Statistics::Data/dump_data>.
 
 =cut
 
@@ -365,14 +353,14 @@ sub _feedme {
     my $method = shift;
     my $self = shift;
     my $args = ref $_[0] ? $_[0] : {@_};
-    my $statname = $args->{'stat'} || '';
-    my $class = __PACKAGE__ . '::' . ucfirst($statname);
+    my $statname = $args->{'stat'} || q{};
+    my $class = __PACKAGE__ . q{::} . ucfirst($statname);
     eval "require $class";
     croak __PACKAGE__, " error: Requested sequences module '$class' is not valid/available. You might need to install '$class'" if $@;
-    my ($val, $nself) = ('', {});
+    my ($val, $nself) = (q{}, {});
     #my $nself = {};
     bless($nself, $class);#$nself = $class->new();
-    $nself->{$_} = $self->{$_} foreach keys %$self;
+    $nself->{$_} = $self->{$_} foreach keys %{$self};
     no strict 'refs';
     eval '$val = $nself->$method($args)'; # but does not trap "deep recursion" if method not defined
     croak __PACKAGE__, " error: Method '$method' is not defined for $class" if $@;
@@ -381,32 +369,22 @@ sub _feedme {
 }
 
 sub _precisioned {
-    return $_[0] ? sprintf('%.' . $_[0] . 'f', $_[1]) : (defined $_[1] ? $_[1] : ''); # don't lose any zero
+    return $_[0] ? sprintf(q{%.} . $_[0] . 'f', $_[1]) : (defined $_[1] ? $_[1] : q{}); # don't lose any zero
 }
 
-1;
-
-__END__
-
-=head1 REVISIONS
-
-The series testing methods (series_init, series_update and series_test) have been moved to Statistics::Zed as of v0.03.
-
-Simply giving the first argument to C<test> as the name of the test, unkeyed, is deprecated.
-
-See CHANGES file in installation dist.
-
-=head1 BUNDLING?
+=head1 BUNDLING
 
 This module C<use>s its sub-modules implicitly - so a bundled program using this module might need to explicitly C<use> its sub-modules if these need to be included in the bundle itself.
 
-=head1 AUTHOR/LICENSE
+=head1 AUTHOR
+
+Roderick Garton, C<< <rgarton at cpan.org> >>
+
+=head1 LICENSE AND COPYRIGHT
 
 =over 4
 
 =item Copyright (c) 2006-2013 Roderick Garton
-
-rgarton AT cpan DOT org
 
 This program is free software. It may be used, redistributed and/or modified under the same terms as Perl-5.6.1 (or later) (see L<http://www.perl.com/perl/misc/Artistic.html>).
 
@@ -417,3 +395,5 @@ To the maximum extent permitted by applicable law, the author of this module dis
 =back
 
 =cut
+
+1; # end of Statistics::Sequences

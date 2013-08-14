@@ -1,0 +1,49 @@
+{
+   "abstract" : "Manage sequences (ordered list of literals) for testing their runs, joins, turns, trinomes, potential energy, etc.",
+   "author" : [
+      "Roderick Garton <rgarton@cpan.org>"
+   ],
+   "dynamic_config" : 1,
+   "generated_by" : "Module::Build version 0.4007, CPAN::Meta::Converter version 2.132140",
+   "license" : [
+      "perl_5"
+   ],
+   "meta-spec" : {
+      "url" : "http://search.cpan.org/perldoc?CPAN::Meta::Spec",
+      "version" : "2"
+   },
+   "name" : "Statistics-Sequences",
+   "prereqs" : {
+      "build" : {
+         "requires" : {
+            "Scalar::Util" : "1.18",
+            "Statistics::Data" : "0.08",
+            "Test::More" : "0"
+         }
+      },
+      "configure" : {
+         "requires" : {
+            "Module::Build" : "0.4"
+         }
+      },
+      "runtime" : {
+         "requires" : {
+            "Scalar::Util" : "1.18",
+            "Statistics::Data" : "0.08"
+         }
+      }
+   },
+   "provides" : {
+      "Statistics::Sequences" : {
+         "file" : "lib/Statistics/Sequences.pm",
+         "version" : "0.12"
+      }
+   },
+   "release_status" : "stable",
+   "resources" : {
+      "license" : [
+         "http://dev.perl.org/licenses/"
+      ]
+   },
+   "version" : "0.12"
+}

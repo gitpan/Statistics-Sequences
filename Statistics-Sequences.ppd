@@ -1,8 +1,9 @@
-<SOFTPKG NAME="Statistics-Sequences" VERSION="0,11,0,0">
-    <TITLE>Statistics-Sequences</TITLE>
-    <ABSTRACT>Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.</ABSTRACT>
+<SOFTPKG NAME="Statistics-Sequences" VERSION="0.12">
+    <ABSTRACT>Manage sequences (ordered list of literals) for testing their runs, joins, turns, trinomes, potential energy, etc.</ABSTRACT>
     <AUTHOR>Roderick Garton &lt;rgarton@cpan.org&gt;</AUTHOR>
     <IMPLEMENTATION>
-        <CODEBASE HREF="PPM-Statistics-Sequences-0.11.tar.gz" />
+        <REQUIRE NAME="Scalar::Util" VERSION="1.18" />
+        <REQUIRE NAME="Statistics::Data" VERSION="0.08" />
+        <CODEBASE HREF="PPM-Statistics-Sequences-0.12.tar.gz" />
     </IMPLEMENTATION>
 </SOFTPKG>

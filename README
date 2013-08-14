@@ -1,4 +1,4 @@
-Statistics-Sequences version 0.11
+Statistics-Sequences version 0.12
 ==================================
 
 Tests of sequential structure in the form of runs, joins, bunches, etc. (if these sub-modules are installed). It doesn't do much itself but provide a common api for handling the data (via its parent Statistics::Data) and for accessing the stats and tests of its child modules, Statistics::Sequences::Runs, etc. (which can also do their own work independently).

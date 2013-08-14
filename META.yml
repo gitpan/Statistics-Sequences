@@ -1,14 +1,15 @@
 ---
-abstract: 'Tests of sequences for runs, joins, bunches, turns, doublets, trinomes, potential energy, etc.'
+abstract: 'Manage sequences (ordered list of literals) for testing their runs, joins, turns, trinomes, potential energy, etc.'
 author:
   - 'Roderick Garton <rgarton@cpan.org>'
 build_requires:
   Scalar::Util: 1.18
-  Statistics::Data: 0.02
+  Statistics::Data: 0.08
   Test::More: 0
 configure_requires:
-  Module::Build: 0.36
-generated_by: 'Module::Build version 0.3624'
+  Module::Build: 0.4
+dynamic_config: 1
+generated_by: 'Module::Build version 0.4007, CPAN::Meta::Converter version 2.132140'
 license: perl
 meta-spec:
   url: http://module-build.sourceforge.net/META-spec-v1.4.html
@@ -17,10 +18,10 @@ name: Statistics-Sequences
 provides:
   Statistics::Sequences:
     file: lib/Statistics/Sequences.pm
-    version: 0.11
+    version: 0.12
 requires:
   Scalar::Util: 1.18
-  Statistics::Data: 0.02
+  Statistics::Data: 0.08
 resources:
   license: http://dev.perl.org/licenses/
-version: 0.11
+version: 0.12

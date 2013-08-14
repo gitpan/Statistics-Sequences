@@ -10,3 +10,4 @@ t/pod-coverage.t
 t/pod.t
 t/ref.t
 Statistics-Sequences.ppd
+META.json
